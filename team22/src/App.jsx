@@ -7,6 +7,7 @@ function App() {
   // hello test from jai
   // hello from hadi
   // hello testing from amar
+  // hello part 2 hadi
   return (
     <>
       <div>
