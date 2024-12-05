@@ -1,4 +1,3 @@
-import React, { useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { 
     Container, 
@@ -12,9 +11,10 @@ import {
     ButtonGroup,
     Dropdown
 } from 'react-bootstrap';
-import EmpTodoProgressCharts from './EmpTodoProgressCharts';
+import ManTodoProgressCharts from './ManTodoProgressCharts';
+import React, { useState } from 'react';
 
-function EmpTodoList() {
+function ManTodoList() {
     const [todos, setTodos] = useState([]);
     const [deletedTodos, setDeletedTodos] = useState([]);
     const [showModal, setShowModal] = useState(false);
@@ -188,7 +188,7 @@ function EmpTodoList() {
               </div>
 
               {showCharts ? (
-                  <EmpTodoProgressCharts todos={todos} />
+                  <ManTodoProgressCharts todos={todos} />
               ) : (
                   <>
 
@@ -477,5 +477,5 @@ function EmpTodoList() {
     );
 }
 
-export default EmpTodoList;
+export default ManTodoList;
 
