@@ -26,10 +26,9 @@ $result = $stmt->get_result();
 
 if ($result->num_rows > 0) {
     $user = $result->fetch_assoc();
-    echo json_encode(['success' => true, 'user' => ['name' => $user['name'], 'role' => $user['role']]]);
+    echo json_encode(['success' => true, 'user' => ['userId' => $user['user_id'] ,'name' => $user['name'], 'role' => $user['role']]]);
 } else {
-    echo json_encode(['success' => false, 'message' => '
-    ']);
+    echo json_encode(['success' => false, 'message' => 'Invalid login details']);
 }
 
 $stmt->close();

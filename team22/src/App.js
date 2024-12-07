@@ -23,6 +23,7 @@ import ManTodoList from './manager/ManTodoList/ManTodoList';
 
 function App() {
   const [userRole, setUserRole] = useState(null); // Track logged-in user role
+  const [userId, setUserId] = useState(null); // Track logged-in user ID
 
   return (
     <Router>
@@ -40,9 +41,9 @@ function App() {
               {/* Employee Routes */}
               {userRole === "Employee" && (
                 <>
-                  <Route path="/" element={<EmpHome />} />
+                  <Route path="/" element={<EmpHome userId={userId} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
-                  <Route path="/forum" element={<EmpForum />} />
+                  <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<EmpTodoList />} />
                 </>
               )}
@@ -69,7 +70,11 @@ function App() {
         <Routes>
           <Route
             path="/"
-            element={<LoginForm onLoginSuccess={(role) => setUserRole(role)} />}
+            element={<LoginForm onLoginSuccess={(role, id) => {
+              setUserRole(role);
+              setUserId(id);
+            }} />
+            }
           />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>

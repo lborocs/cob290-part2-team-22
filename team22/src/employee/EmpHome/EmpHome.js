@@ -1,11 +1,10 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-const EmpHome = () => {
+const EmpHome = ({ userId }) => {
   return (
-    <div>
-      <h1 className="text-center">Welcome to the Employee Homepage</h1>
-      <p className="text-center">This is the homepage content.</p>
+    <div className="d-flex justify-content-center align-items-center vh-100">
+      <h1>User ID: {userId}</h1>
     </div>
   );
 };

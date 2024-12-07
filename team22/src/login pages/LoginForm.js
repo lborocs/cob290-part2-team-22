@@ -20,7 +20,7 @@ const LoginForm = ({ onLoginSuccess }) => {
             const data = await response.json();
             if (data.success) {
                 setMessage(`Welcome, ${data.user.name}!`);
-                onLoginSuccess(data.user.role); // Pass the role to App.js
+                onLoginSuccess(data.user.role, data.user.userId); // Pass the role to App.js
             } else {
                 setMessage(data.message);
             }
