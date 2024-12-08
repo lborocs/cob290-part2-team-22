@@ -1,39 +1,55 @@
-import React, { useRef, useEffect } from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Chart, registerables } from 'chart.js';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Container, Row, Col, Card } from 'react-bootstrap';
 
 Chart.register(...registerables);
 
-const EmpTodoProgressCharts = ({ todos }) => {
-    // References for chart canvases
+const EmpTodoProgressCharts = ({ userId }) => {
     const lowPriorityChartRef = useRef(null);
     const mediumPriorityChartRef = useRef(null);
     const highPriorityChartRef = useRef(null);
     const overallChartRef = useRef(null);
 
+    const [chartData, setChartData] = useState({
+        low: { completed: 0, pending: 0 },
+        medium: { completed: 0, pending: 0 },
+        high: { completed: 0, pending: 0 },
+        overall: { completed: 0, pending: 0 }
+    });
+
+    useEffect(() => {
+        const fetchChartData = async () => {
+            try {
+                const response = await fetch(`http://35.214.101.36/EmpToDoList.php?user_id=${userId}&chart_data=true`);
+                const data = await response.json();
+                setChartData(data);
+            } catch (error) {
+                console.error('Error fetching chart data:', error);
+            }
+        };
+
+        fetchChartData();
+    }, [userId]);
+
     // Function to create chart for a specific priority
     const createPriorityChart = (chartRef, priorityLevel) => {
         const ctx = chartRef.current.getContext('2d');
-        const priorityTodos = todos.filter(todo => todo.priority === priorityLevel);
-        const completedTodos = priorityTodos.filter(todo => todo.completed);
+        const priorityData = chartData[priorityLevel] || { completed: 0, pending: 0 };
 
         const data = {
             labels: ['Completed', 'Pending'],
             datasets: [{
-                data: [
-                    completedTodos.length, 
-                    priorityTodos.length - completedTodos.length
-                ],
-                backgroundColor: priorityLevel === 'low' 
-                    ? ['#4CAF50', '#C8E6C9'] 
-                    : priorityLevel === 'medium' 
-                    ? ['#FFC107', '#FFE082'] 
+                data: [priorityData.completed, priorityData.pending],
+                backgroundColor: priorityLevel === 'low'
+                    ? ['#4CAF50', '#C8E6C9']
+                    : priorityLevel === 'medium'
+                    ? ['#FFC107', '#FFE082']
                     : ['#F44336', '#FFCDD2']
             }]
         };
 
-        const config = {
+        return new Chart(ctx, {
             type: 'doughnut',
             data: data,
             options: {
@@ -48,28 +64,23 @@ const EmpTodoProgressCharts = ({ todos }) => {
                     }
                 }
             }
-        };
-
-        return new Chart(ctx, config);
+        });
     };
 
     // Function to create overall progress chart
     const createOverallChart = (chartRef) => {
         const ctx = chartRef.current.getContext('2d');
-        const completedTodos = todos.filter(todo => todo.completed);
+        const overallData = chartData.overall || { completed: 0, pending: 0 };
 
         const data = {
             labels: ['Completed', 'Pending'],
             datasets: [{
-                data: [
-                    completedTodos.length, 
-                    todos.length - completedTodos.length
-                ],
+                data: [overallData.completed, overallData.pending],
                 backgroundColor: ['#2196F3', '#FF9800']
             }]
         };
 
-        const config = {
+        return new Chart(ctx, {
             type: 'pie',
             data: data,
             options: {
@@ -84,26 +95,22 @@ const EmpTodoProgressCharts = ({ todos }) => {
                     }
                 }
             }
-        };
-
-        return new Chart(ctx, config);
+        });
     };
 
-    // Create charts on component mount or when todos change
     useEffect(() => {
         const lowPriorityChart = createPriorityChart(lowPriorityChartRef, 'low');
         const mediumPriorityChart = createPriorityChart(mediumPriorityChartRef, 'medium');
         const highPriorityChart = createPriorityChart(highPriorityChartRef, 'high');
         const overallChart = createOverallChart(overallChartRef);
 
-        // Cleanup function to destroy charts
         return () => {
             lowPriorityChart.destroy();
             mediumPriorityChart.destroy();
             highPriorityChart.destroy();
             overallChart.destroy();
         };
-    }, [todos, createPriorityChart, createOverallChart]);
+    }, [chartData]);
 
     return (
         <Container>

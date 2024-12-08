@@ -44,7 +44,7 @@ function App() {
                   <Route path="/" element={<EmpHome userId={userId} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
-                  <Route path="/todolist" element={<EmpTodoList />} />
+                  <Route path="/todolist" element={<EmpTodoList userId={userId} />} />
                 </>
               )}
 
