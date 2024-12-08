@@ -108,7 +108,7 @@ function TopicsList({ userId }) {
             return (
               <li key={topic.topic_id} className="list-group-item d-flex justify-content-between align-items-start">
                 <div className="flex-grow-1">
-                  <Link to={`/topic/${topic.topic_id}`} className="text-decoration-none">
+                  <Link to={`topic/${topic.topic_id}`} className="text-decoration-none">
                     <h5 className="mb-1">
                       <i className="bi bi-chat-left-text"></i> {topic.title}
                     </h5>
@@ -343,7 +343,7 @@ function TopicView({ userId }) {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <i className="bi bi-plus-circle"></i> Create Post
         </button>
-        <Link to="/" className="btn btn-secondary">
+        <Link to=".." className="btn btn-secondary">
           <i className="bi bi-arrow-left"></i> Back to Topics
         </Link>
       </div>
@@ -484,4 +484,4 @@ function TopicView({ userId }) {
   );
 }
 
-export default App;
+export default EmpForum;
