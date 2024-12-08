@@ -28,20 +28,21 @@ function TopicsList({ userId }) {
     technical: false
   });
 
+  // For deletion (if implemented as before)
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [topicToDelete, setTopicToDelete] = React.useState(null);
 
   React.useEffect(() => {
     fetchTopics();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchTopics = () => {
-    fetch('http://35.214.101.36/getTopics.php')
+    fetch('http://35.214.101.36/EmpForum.php?process=getTopics')
       .then(res => res.json())
-      .then(data => setTopics(data));
+      .then(data => setTopics(data))
+      .catch(err => console.error('Error fetching topics:', err));
   };
-
+  
   const handleCreateTopic = (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -50,7 +51,7 @@ function TopicsList({ userId }) {
     formData.append('technical', newTopic.technical ? 1 : 0);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/createTopic.php', {
+    fetch('http://35.214.101.36/EmpForum.php?process=createTopic', {
       method: 'POST',
       body: formData
     })
@@ -73,7 +74,7 @@ function TopicsList({ userId }) {
     formData.append('topic_id', topicToDelete.topic_id);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/deleteTopic.php', {
+    fetch('http://35.214.101.36/EmpForum.php?process=deleteTopic', {
       method: 'POST',
       body: formData
     })
@@ -107,8 +108,7 @@ function TopicsList({ userId }) {
             return (
               <li key={topic.topic_id} className="list-group-item d-flex justify-content-between align-items-start">
                 <div className="flex-grow-1">
-                  {/* Note: Link is relative. Since we're inside /forum, "topic/..." becomes /forum/topic/... */}
-                  <Link to={`topic/${topic.topic_id}`} className="text-decoration-none">
+                  <Link to={`/topic/${topic.topic_id}`} className="text-decoration-none">
                     <h5 className="mb-1">
                       <i className="bi bi-chat-left-text"></i> {topic.title}
                     </h5>
@@ -143,7 +143,7 @@ function TopicsList({ userId }) {
                           <i className="bi bi-trash"></i> Delete
                         </button>
                       </li>
-                      {/* If you want Edit or other actions, add them here */}
+                      {/* Add more options (like Edit) here if desired */}
                     </ul>
                   </div>
                 )}
@@ -239,23 +239,31 @@ function TopicView({ userId }) {
   const [showModal, setShowModal] = React.useState(false);
   const [newPostContent, setNewPostContent] = React.useState('');
 
+  // For deletion
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [postToDelete, setPostToDelete] = React.useState(null);
 
+  // For editing
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [postToEdit, setPostToEdit] = React.useState(null);
   const [editPostContent, setEditPostContent] = React.useState('');
 
   React.useEffect(() => {
-    fetchPosts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetchPosts(id); // Ensure id is converted to a number
   }, [id]);
+  
 
-  const fetchPosts = () => {
-    fetch(`http://35.214.101.36/getPosts.php?topic_id=${id}`)
+  const fetchPosts = (id) => {
+    fetch(`http://35.214.101.36/EmpForum.php?process=getPosts&topic_id=${id}`)
       .then(res => res.json())
-      .then(data => setPosts(data));
+      .then(data => {
+        console.log(data); // Debugging step to check the response
+        setPosts(data);
+      })
+      .catch(err => console.error('Error fetching posts:', err));
   };
+  
+  
 
   const handleCreatePost = (e) => {
     e.preventDefault();
@@ -264,14 +272,14 @@ function TopicView({ userId }) {
     formData.append('content', newPostContent);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/createPost.php', {
+    fetch('http://35.214.101.36/EmpForum.php?process=createPost', {
       method: 'POST',
       body: formData
     })
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          fetchPosts();
+          fetchPosts(id);
           setShowModal(false);
           setNewPostContent('');
         } else {
@@ -282,11 +290,12 @@ function TopicView({ userId }) {
 
   const handleDeletePost = () => {
     if (!postToDelete) return;
+
     const formData = new FormData();
     formData.append('post_id', postToDelete.post_id);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/deletePost.php', {
+    fetch('http://35.214.101.36/EmpForum.php?process=deletePost', {
       method: 'POST',
       body: formData
     })
@@ -295,7 +304,7 @@ function TopicView({ userId }) {
       if (data.success) {
         setShowDeleteModal(false);
         setPostToDelete(null);
-        fetchPosts();
+        fetchPosts(id);
       } else {
         alert('Error deleting post.');
       }
@@ -311,7 +320,7 @@ function TopicView({ userId }) {
     formData.append('user_id', userId);
     formData.append('content', editPostContent);
 
-    fetch('http://35.214.101.36/updatePost.php', {
+    fetch('http://35.214.101.36/EmpForum.php?process=updatePost', {
       method: 'POST',
       body: formData
     })
@@ -320,7 +329,7 @@ function TopicView({ userId }) {
       if (data.success) {
         setShowEditModal(false);
         setPostToEdit(null);
-        fetchPosts();
+        fetchPosts(id);
       } else {
         alert('Error updating post.');
       }
@@ -334,8 +343,7 @@ function TopicView({ userId }) {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <i className="bi bi-plus-circle"></i> Create Post
         </button>
-        {/* Link back to the parent route (../) so that /forum/topic/:id goes back to /forum */}
-        <Link to=".." className="btn btn-secondary">
+        <Link to="/" className="btn btn-secondary">
           <i className="bi bi-arrow-left"></i> Back to Topics
         </Link>
       </div>
@@ -476,4 +484,4 @@ function TopicView({ userId }) {
   );
 }
 
-export default EmpForum;
+export default App;
