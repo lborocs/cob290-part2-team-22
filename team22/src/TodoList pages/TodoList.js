@@ -11,10 +11,11 @@ import {
     ButtonGroup,
     Dropdown
 } from 'react-bootstrap';
-import ManTodoProgressCharts from './ManTodoProgressCharts';
+import TodoProgressCharts from './TodoProgressCharts';
 import React, { useState } from 'react';
+import { useEffect } from 'react';
 
-function ManTodoList() {
+function TodoList({ userId }) {
     const [todos, setTodos] = useState([]);
     const [deletedTodos, setDeletedTodos] = useState([]);
     const [showModal, setShowModal] = useState(false);
@@ -30,13 +31,39 @@ function ManTodoList() {
         priority: 'all',
         status: 'all'
     });
+
+    useEffect(() => {
+        fetchTodos();
+    }, []);
+
+    const fetchTodos = async () => {
+        try {
+            const response = await fetch(`http://35.214.101.36/ToDoList.php?user_id=${userId}`);
+            const data = await response.json();
+    
+            // Map database fields to match the state keys
+            const formattedData = data.map(task => ({
+                ...task,
+                name: task.title || '',        // Map 'title' to 'name'
+                dueDate: task.due_date || '',  // Map 'due_date' to 'dueDate'
+            }));
+    
+            setTodos(formattedData);
+        } catch (error) {
+            console.error('Error fetching todos:', error);
+        }
+    };
+    
+    
+
     const [newTodo, setNewTodo] = useState({
-        name: '',
+        name: '',          // Ensure 'name' key exists
         description: '',
         status: 'pending',
         priority: 'low',
         dueDate: ''
     });
+    
 
     const handleClose = () => {
         setShowModal(false);
@@ -51,11 +78,28 @@ function ManTodoList() {
 
     const handleShow = (index) => {
         if (index !== undefined) {
+            const task = todos[index];
             setEditingIndex(index);
-            setNewTodo(todos[index]);
+            setNewTodo({
+                name: task.name,               // Use 'name' instead of 'title'
+                description: task.description,
+                status: task.status?.toLowerCase() || 'pending',
+                priority: task.priority?.toLowerCase() || 'low',
+                dueDate: task.dueDate,         // Use 'dueDate' instead of 'due_date'
+                todo_id: task.todo_id
+            });
+        } else {
+            setNewTodo({
+                name: '',
+                description: '',
+                status: 'pending',
+                priority: 'low',
+                dueDate: ''
+            });
         }
         setShowModal(true);
     };
+    
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -65,24 +109,36 @@ function ManTodoList() {
         }));
     };
 
-    const handleSubmit = () => {
-        if (newTodo.name.trim()) {
-            if (editingIndex !== null) {
-                // Editing existing todo
-                const updatedTodos = [...todos];
-                updatedTodos[editingIndex] = {
-                    ...newTodo,
-                    completed: newTodo.status === 'completed'
-                };
-                setTodos(updatedTodos);
-            } else {
-                // Adding new todo
-                setTodos([...todos, { ...newTodo, completed: newTodo.status === 'completed' }]);
-            }
+    const handleSubmit = async () => {
+        if (!newTodo.name || !newTodo.name.trim()) {
+            console.error('Task name is required.');
+            return;
+        }
+    
+        const method = editingIndex !== null ? 'PUT' : 'POST';
+        const payload = {
+            todo_id: editingIndex !== null ? todos[editingIndex].todo_id : undefined,
+            user_id: userId, // Replace with actual user ID if dynamic
+            title: newTodo.name,
+            description: newTodo.description,
+            status: newTodo.status.charAt(0).toUpperCase() + newTodo.status.slice(1),
+            priority: newTodo.priority.charAt(0).toUpperCase() + newTodo.priority.slice(1),
+            due_date: newTodo.dueDate
+        };
+    
+        try {
+            await fetch('http://35.214.101.36/ToDoList.php', {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            fetchTodos(); // Refresh the task list
             handleClose();
+        } catch (error) {
+            console.error('Error saving task:', error);
         }
     };
-
+    
     const toggleTodo = (index) => {
         const newTodos = [...todos];
         newTodos[index].completed = !newTodos[index].completed;
@@ -90,15 +146,23 @@ function ManTodoList() {
         setTodos(newTodos);
     };
 
-    const confirmDelete = () => {
-      if (deleteIndex !== null) {
-          const todoToDelete = todos[deleteIndex];
-          const newTodos = todos.filter((_, i) => i !== deleteIndex);
-          setTodos(newTodos);
-          setDeletedTodos([...deletedTodos, { ...todoToDelete, deletedAt: new Date() }]);
-          handleCloseDeleteModal();
-      }
-  };
+    const confirmDelete = async () => {
+        if (deleteIndex !== null) {
+            const todoId = todos[deleteIndex].todo_id;
+            try {
+                await fetch('http://35.214.101.36/ToDoList.php', {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ todo_id: todoId })
+                });
+                fetchTodos(); // Refresh the task list
+                handleCloseDeleteModal();
+            } catch (error) {
+                console.error('Error deleting task:', error);
+            }
+        }
+    };
+    
 
   // New bin-related handlers
   const handleBinItemSelect = (index) => {
@@ -189,7 +253,7 @@ function ManTodoList() {
                 </div>
 
                 {showCharts ? (
-                    <ManTodoProgressCharts todos={todos} />
+                    <TodoProgressCharts userId={userId} />
                 ) : (
                   <>
 
@@ -491,5 +555,5 @@ function ManTodoList() {
     );
 }
 
-export default ManTodoList;
+export default TodoList;
 

@@ -5,7 +5,7 @@ import { Container, Row, Col, Card } from 'react-bootstrap';
 
 Chart.register(...registerables);
 
-const EmpTodoProgressCharts = ({ userId }) => {
+const TodoProgressCharts = ({ userId }) => {
     const lowPriorityChartRef = useRef(null);
     const mediumPriorityChartRef = useRef(null);
     const highPriorityChartRef = useRef(null);
@@ -21,7 +21,7 @@ const EmpTodoProgressCharts = ({ userId }) => {
     useEffect(() => {
         const fetchChartData = async () => {
             try {
-                const response = await fetch(`http://35.214.101.36/EmpToDoList.php?user_id=${userId}&chart_data=true`);
+                const response = await fetch(`http://35.214.101.36/ToDoList.php?user_id=${userId}&chart_data=true`);
                 const data = await response.json();
                 setChartData(data);
             } catch (error) {
@@ -151,4 +151,4 @@ const EmpTodoProgressCharts = ({ userId }) => {
     );
 };
 
-export default EmpTodoProgressCharts;
+export default TodoProgressCharts;

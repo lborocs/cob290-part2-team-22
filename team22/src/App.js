@@ -5,9 +5,11 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 // Login Component
 import LoginForm from './login pages/LoginForm';
 
+// Todo List Component (same for employees and managers)
+import TodoList from './TodoList pages/TodoList';
+
 // Employee Components
 import EmpNavbar from './employee/EmpNavbar/EmpNavbar';
-import EmpTodoList from './employee/EmpTodoList/EmpTodoList';
 import EmpHome from './employee/EmpHome/EmpHome';
 import EmpProjectsTasks from './employee/EmpProjectsTasks/EmpProjectsTasks';
 import EmpForum from './employee/EmpForum/EmpForum';
@@ -19,7 +21,6 @@ import ManEmployees from './manager/ManEmployees/ManEmployees';
 import ManProjects from './manager/ManProjects/ManProjects';
 import ManTasks from './manager/ManTasks/ManTasks';
 import ManForum from './manager/ManForum/ManForum';
-import ManTodoList from './manager/ManTodoList/ManTodoList';
 
 function App() {
   const [userRole, setUserRole] = useState(null); // Track logged-in user role
@@ -44,7 +45,7 @@ function App() {
                   <Route path="/" element={<EmpHome userId={userId} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
-                  <Route path="/todolist" element={<EmpTodoList userId={userId} />} />
+                  <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
 
@@ -56,7 +57,7 @@ function App() {
                   <Route path="/tasks" element={<ManTasks />} />
                   <Route path="/employees" element={<ManEmployees />} />
                   <Route path="/forum" element={<ManForum />} />
-                  <Route path="/todolist" element={<ManTodoList />} />
+                  <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
 
