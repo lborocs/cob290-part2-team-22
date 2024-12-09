@@ -56,7 +56,7 @@ function App() {
                   <Route path="/projects" element={<ManProjects />} />
                   <Route path="/tasks" element={<ManTasks />} />
                   <Route path="/employees" element={<ManEmployees />} />
-                  <Route path="/forum" element={<ManForum />} />
+                  <Route path="/forum/*" element={<ManForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
