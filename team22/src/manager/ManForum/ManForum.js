@@ -37,7 +37,7 @@ function TopicsList({ userId }) {
   }, []);
 
   const fetchTopics = () => {
-    fetch('http://35.214.101.36/EmpForum.php?process=getTopics')
+    fetch('http://35.214.101.36/Forum.php?process=getTopics')
       .then(res => res.json())
       .then(data => setTopics(data))
       .catch(err => console.error('Error fetching topics:', err));
@@ -51,7 +51,7 @@ function TopicsList({ userId }) {
     formData.append('technical', newTopic.technical ? 1 : 0);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/EmpForum.php?process=createTopic', {
+    fetch('http://35.214.101.36/Forum.php?process=createTopic', {
       method: 'POST',
       body: formData
     })
@@ -74,7 +74,7 @@ function TopicsList({ userId }) {
     formData.append('topic_id', topicToDelete.topic_id);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/EmpForum.php?process=deleteTopic', {
+    fetch('http://35.214.101.36/Forum.php?process=deleteTopic', {
       method: 'POST',
       body: formData
     })
@@ -254,7 +254,7 @@ function TopicView({ userId }) {
   
 
   const fetchPosts = (id) => {
-    fetch(`http://35.214.101.36/EmpForum.php?process=getPosts&topic_id=${id}`)
+    fetch(`http://35.214.101.36/Forum.php?process=getPosts&topic_id=${id}`)
       .then(res => res.json())
       .then(data => {
         console.log(data); // Debugging step to check the response
@@ -272,7 +272,7 @@ function TopicView({ userId }) {
     formData.append('content', newPostContent);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/EmpForum.php?process=createPost', {
+    fetch('http://35.214.101.36/Forum.php?process=createPost', {
       method: 'POST',
       body: formData
     })
@@ -295,7 +295,7 @@ function TopicView({ userId }) {
     formData.append('post_id', postToDelete.post_id);
     formData.append('user_id', userId);
 
-    fetch('http://35.214.101.36/EmpForum.php?process=deletePost', {
+    fetch('http://35.214.101.36/Forum.php?process=deletePost', {
       method: 'POST',
       body: formData
     })
@@ -320,7 +320,7 @@ function TopicView({ userId }) {
     formData.append('user_id', userId);
     formData.append('content', editPostContent);
 
-    fetch('http://35.214.101.36/EmpForum.php?process=updatePost', {
+    fetch('http://35.214.101.36/Forum.php?process=updatePost', {
       method: 'POST',
       body: formData
     })
