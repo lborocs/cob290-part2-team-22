@@ -49,7 +49,7 @@ function App() {
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/settings" element={<TodoList userId={userId} />} />
+                  <Route path="/settings" element={<EmpSettings userId={userId} />} />
                 </>
               )}
 
@@ -62,7 +62,7 @@ function App() {
                   <Route path="/employees" element={<ManEmployees />} />
                   <Route path="/forum/*" element={<ManForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/settings" element={<TodoList userId={userId} />} />
+                  <Route path="/settings" element={<ManSettings userId={userId} />} />
                 </>
               )}
 

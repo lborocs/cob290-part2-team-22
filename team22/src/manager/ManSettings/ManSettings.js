@@ -1,4 +1,5 @@
 import React from 'react';
+import { Routes, Route, Link, useParams } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 const ManSettings = () => {

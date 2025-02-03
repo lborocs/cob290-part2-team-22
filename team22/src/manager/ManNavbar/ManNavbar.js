@@ -64,13 +64,9 @@ const ManNavbar = () => {
         </ul>
       </div>
       <div className="px-3 pb-3">
-        <Link
-        to="/settings"
-        className="nav-link text-white"
-        style={{ padding: "10px 15px" }}
+        <Link to="/settings" className="nav-link text-white" style={{ padding: "10px 15px" }}
         onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
         onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-          
         Settings
         </Link>
       </div>
