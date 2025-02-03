@@ -5,7 +5,7 @@ const EmpHome = ({ userId }) => {
   return (
     <div className="d-flex justify-content-center align-items-center vh-100">
       <h1>User ID: {userId}</h1>
-    </div>
+    </div> // practice
   );
 };
 
