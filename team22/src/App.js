@@ -9,7 +9,7 @@ import LoginForm from './login pages/LoginForm';
 import TodoList from './TodoList pages/TodoList';
 
 // Employee Components
-import EmpNavbar from './employee/Empnavbar/Empnavbar';
+import EmpNavbar from './employee/EmpNavbar/EmpNavbar';
 import EmpHome from './employee/EmpHome/EmpHome';
 import EmpProjectsTasks from './employee/EmpProjectsTasks/EmpProjectsTasks';
 import EmpForum from './employee/EmpForum/EmpForum';
@@ -19,7 +19,7 @@ import EmpSettings from './employee/EmpSettings/EmpSettings';
 // Manager Components
 import ManNavbar from './manager/ManNavbar/ManNavbar';
 import ManHome from './manager/ManHome/ManHome';
-import ManEmployees from './manager/ManEmployees/manemployees';
+import ManEmployees from './manager/ManEmployees/ManEmployees';
 import ManProjects from './manager/ManProjects/ManProjects';
 import ManTasks from './manager/ManTasks/ManTasks';
 import ManForum from './manager/ManForum/ManForum';
