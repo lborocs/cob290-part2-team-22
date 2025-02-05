@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom"; // Import Link for navigation
 
 const LoginForm = ({ onLoginSuccess }) => {
     const [username, setUsername] = useState("");
@@ -20,7 +21,7 @@ const LoginForm = ({ onLoginSuccess }) => {
             const data = await response.json();
             if (data.success) {
                 setMessage(`Welcome, ${data.user.name}!`);
-                onLoginSuccess(data.user.role, data.user.userId); // Pass the role to App.js
+                onLoginSuccess(data.user.role, data.user.userId);
             } else {
                 setMessage(data.message);
             }
@@ -74,6 +75,11 @@ const LoginForm = ({ onLoginSuccess }) => {
                     </button>
                     {message && <p className="mt-3 text-danger">{message}</p>}
                 </form>
+                
+                {/* Register Account Link */}
+                <p className="mt-3">
+                    Don't have an account? <Link to="/register">Register Account</Link>
+                </p>
             </div>
         </div>
     );
