@@ -1,100 +1,152 @@
-import React, { useState } from 'react';
-import { Container, Button, Modal, Form, Card, ListGroup, Badge, ButtonGroup } from 'react-bootstrap';
-import { Pie } from 'react-chartjs-2';
+import React, { useState, useEffect } from 'react';
+import { Container, Button, Modal, Form, Card, Badge, ButtonGroup } from 'react-bootstrap';
 import { Row, Col } from "antd";
+import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
 import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff } from 'react-icons/fi';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const employees = [
-  'Micheal Jones',
-  'Alice Smith',
-  'Emma Khan',
-  'Tom Clark',
-  'Raj Patel'
-];
+// Set the API URL and the current logged-in manager (adjust as needed)
+const API_URL = 'http://35.214.101.36/ManTasks.php';
+// Example current manager info
+const currentUser = { user_id: 3, role: "Manager", name: "John Manager" };
 
 const ManTasks = () => {
   const [showModal, setShowModal] = useState(false);
   const [showChart, setShowChart] = useState(false);
-  const [selectedEmployee, setSelectedEmployee] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
   const [editingTask, setEditingTask] = useState(null);
+  const [users, setUsers] = useState([]);
+  const [tasks, setTasks] = useState([]);
   const [viewOptions, setViewOptions] = useState({
     active: true,
     completed: true,
     binned: false
   });
-  const [tasks, setTasks] = useState([]);
+  // formData corresponds to the individual_tasks table fields
   const [formData, setFormData] = useState({
-    description: '',
     priority: 'Medium',
     deadline: '',
-    assignedTo: '',
-    status: 'active'
+    assignedTo: ''
   });
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingTask) {
-      setTasks(tasks.map(task => 
-        task.id === editingTask.id ? { ...formData, id: editingTask.id } : task
-      ));
-    } else {
-      const newTask = {
-        id: Date.now(),
-        ...formData,
-        createdAt: new Date().toISOString()
-      };
-      setTasks([...tasks, newTask]);
+  // Fetch users from the backend
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=getUsers`);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error('Error fetching users', err);
     }
-    setShowModal(false);
-    setEditingTask(null);
-    setFormData({
-      description: '',
-      priority: 'Medium',
-      deadline: '',
-      assignedTo: '',
-      status: 'active'
-    });
   };
 
-  const handleStatusChange = (taskId, newStatus) => {
-    setTasks(tasks.map(task => 
-      task.id === taskId ? { ...task, status: newStatus } : task
-    ));
+  // Fetch tasks from the backend (all individual_tasks)
+  const fetchTasks = async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=getTasks`);
+      const data = await res.json();
+      setTasks(data);
+    } catch (err) {
+      console.error('Error fetching tasks', err);
+    }
   };
 
-  const toggleView = (option) => {
-    setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
-  };
+  useEffect(() => {
+    fetchUsers();
+    fetchTasks();
+  }, []);
 
-  const calculateTimeLeft = (deadline) => {
-    const diff = new Date(deadline) - new Date();
-    if (diff < 0) return 'Overdue';
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    return `${days} days left`;
-  };
-
+  // Group tasks by assigned user (user_id) with view filtering
   const groupTasks = () => {
     return tasks.reduce((acc, task) => {
-      if (
-        (task.status === 'active' && viewOptions.active) ||
-        (task.status === 'completed' && viewOptions.completed) ||
-        (task.status === 'binned' && viewOptions.binned)
-      ) {
-        acc[task.assignedTo] = acc[task.assignedTo] || [];
-        acc[task.assignedTo].push(task);
+      if (parseInt(task.binned) === 1) {
+        if (!viewOptions.binned) return acc;
+      } else {
+        if (parseInt(task.status) === 0 && !viewOptions.active) return acc;
+        if (parseInt(task.status) === 1 && !viewOptions.completed) return acc;
       }
+      acc[task.user_id] = acc[task.user_id] || [];
+      acc[task.user_id].push(task);
       return acc;
     }, {});
   };
 
-  const getEmployeeChartData = (employee) => {
-    const employeeTasks = tasks.filter(t => t.assignedTo === employee);
-    const completed = employeeTasks.filter(t => t.status === 'completed').length;
-    const remaining = employeeTasks.filter(t => t.status === 'active').length;
-    
+  // Find a user's name by matching user_id from the users array
+  const getUserName = (userId) => {
+    const user = users.find(u => parseInt(u.user_id) === parseInt(userId));
+    return user ? user.name : 'Unknown';
+  };
+
+  // Create or update a task
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      user_id: formData.assignedTo,
+      priority: formData.priority,
+      deadline: formData.deadline
+    };
+    let url = API_URL;
+    if (editingTask) {
+      payload.individual_task_id = editingTask.individual_task_id;
+      url += '?action=updateTask';
+    } else {
+      url += '?action=createTask';
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await res.json();
+      fetchTasks();
+    } catch (err) {
+      console.error('Error saving task', err);
+    }
+    setShowModal(false);
+    setEditingTask(null);
+    setFormData({ priority: 'Medium', deadline: '', assignedTo: '' });
+  };
+
+  // Toggle view options for active, completed, and binned tasks
+  const toggleView = (option) => {
+    setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
+  };
+
+  // Update a task field (used for status, binning, etc.)
+  const updateTaskField = async (taskId, updateData) => {
+    try {
+      const res = await fetch(`${API_URL}?action=updateTask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ individual_task_id: taskId, ...updateData })
+      });
+      await res.json();
+      fetchTasks();
+    } catch (err) {
+      console.error('Error updating task', err);
+    }
+  };
+
+  // Toggle completion (status: 0 = in progress, 1 = completed)
+  const handleStatusChange = (task) => {
+    if (parseInt(task.binned) === 1) return; // do nothing if task is binned
+    const newStatus = parseInt(task.status) === 1 ? 0 : 1;
+    updateTaskField(task.individual_task_id, { status: newStatus });
+  };
+
+  // Toggle binning (binned: 0 or 1)
+  const handleBinChange = (task) => {
+    const newBinned = parseInt(task.binned) === 1 ? 0 : 1;
+    updateTaskField(task.individual_task_id, { binned: newBinned });
+  };
+
+  const getEmployeeChartData = (userId) => {
+    const employeeTasks = tasks.filter(t => parseInt(t.user_id) === parseInt(userId) && parseInt(t.binned) === 0);
+    const completed = employeeTasks.filter(t => parseInt(t.status) === 1).length;
+    const remaining = employeeTasks.filter(t => parseInt(t.status) === 0).length;
     return {
       labels: ['Completed', 'Remaining'],
       datasets: [{
@@ -105,14 +157,6 @@ const ManTasks = () => {
     };
   };
 
-  const getStatusBadge = (status) => {
-    switch(status) {
-      case 'completed': return 'success';
-      case 'binned': return 'danger';
-      default: return 'primary';
-    }
-  };
-
   return (
     <Container>
       <h1 className="text-center my-4">Task Management</h1>
@@ -121,7 +165,6 @@ const ManTasks = () => {
         <Button variant="primary" onClick={() => setShowModal(true)}>
           Create New Task
         </Button>
-        
         <ButtonGroup>
           <Button 
             variant={viewOptions.active ? 'primary' : 'secondary'} 
@@ -144,14 +187,14 @@ const ManTasks = () => {
         </ButtonGroup>
       </div>
 
-      {Object.entries(groupTasks()).map(([employee, tasks]) => (
-        <div key={employee} className="mb-5">
+      {Object.entries(groupTasks()).map(([userId, userTasks]) => (
+        <div key={userId} className="mb-5">
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h3>{employee}</h3>
+            <h3>{getUserName(userId)}</h3>
             <Button 
               variant="outline-secondary" 
               onClick={() => {
-                setSelectedEmployee(employee);
+                setSelectedUser(userId);
                 setShowChart(true);
               }}
             >
@@ -160,30 +203,29 @@ const ManTasks = () => {
             </Button>
           </div>
           <Row className="g-4">
-            {tasks.map(task => (
-              <Col md={6} lg={6} key={task.id} className="mb-4">
-                <Card className={`h-100 border-3 border-${getStatusBadge(task.status)} shadow-sm`}>
+            {userTasks.map(task => (
+              <Col md={6} lg={6} key={task.individual_task_id} className="mb-4">
+                <Card className="h-100 shadow-sm">
                   <Card.Body>
-                    <div className="d-flex justify-content-between align-items-start mb-3">
-                      <Card.Title className="m-0">
-                        <Form.Check 
-                          type="checkbox"
-                          checked={task.status === 'completed'}
-                          onChange={() => handleStatusChange(
-                            task.id, 
-                            task.status === 'completed' ? 'active' : 'completed'
-                          )}
-                          label={task.description}
-                          disabled={task.status === 'binned'}
-                        />
-                      </Card.Title>
-                      <div className="d-flex gap-1">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <Form.Check 
+                        type="checkbox"
+                        checked={parseInt(task.status) === 1}
+                        onChange={() => handleStatusChange(task)}
+                        disabled={parseInt(task.binned) === 1}
+                        label={task.priority + " Priority"}
+                      />
+                      <div className="d-flex gap-2">
                         <Button 
                           variant="link" 
                           size="sm"
                           onClick={() => {
                             setEditingTask(task);
-                            setFormData(task);
+                            setFormData({
+                              priority: task.priority,
+                              deadline: task.deadline,
+                              assignedTo: task.user_id
+                            });
                             setShowModal(true);
                           }}
                         >
@@ -193,35 +235,18 @@ const ManTasks = () => {
                           variant="link" 
                           size="sm" 
                           className="text-danger"
-                          onClick={() => handleStatusChange(
-                            task.id, 
-                            task.status === 'binned' ? 'active' : 'binned'
-                          )}
+                          onClick={() => handleBinChange(task)}
                         >
-                          {task.status === 'binned' ? <FiArchive /> : <FiTrash2 />}
+                          {parseInt(task.binned) === 1 ? <FiArchive /> : <FiTrash2 />}
                         </Button>
                       </div>
                     </div>
-                    
-                    <div className="d-flex justify-content-between align-items-center">
-                      <Badge bg={
-                        task.priority === 'High' ? 'danger' :
-                        task.priority === 'Medium' ? 'warning' : 'success'
-                      }>
-                        {task.priority}
-                      </Badge>
-                      <small className={
-                        new Date(task.deadline) < new Date() ? 'text-danger' : 'text-success'
-                      }>
-                        {calculateTimeLeft(task.deadline)}
-                      </small>
-                    </div>
-                    
-                    <div className="mt-2">
-                      <small className="text-muted d-block">
-                        Due: {new Date(task.deadline).toLocaleDateString()}
-                      </small>
-                    </div>
+                    <Card.Text>
+                      <small>Deadline: {new Date(task.deadline).toLocaleDateString()}</small>
+                    </Card.Text>
+                    <Card.Text>
+                      <small>Status: {parseInt(task.binned) === 1 ? 'Binned' : (parseInt(task.status) === 1 ? 'Completed' : 'In Progress')}</small>
+                    </Card.Text>
                   </Card.Body>
                 </Card>
               </Col>
@@ -230,40 +255,31 @@ const ManTasks = () => {
         </div>
       ))}
 
-      {/* Task Edit/Create Modal */}
-      <Modal show={showModal} onHide={() => {
-        setShowModal(false);
-        setEditingTask(null);
-      }}>
+      {/* Create/Edit Task Modal */}
+      <Modal show={showModal} onHide={() => { setShowModal(false); setEditingTask(null); }}>
         <Modal.Header closeButton>
           <Modal.Title>{editingTask ? 'Edit Task' : 'Create New Task'}</Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
             <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
-                as="textarea"
-                required
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-              <Form.Label>Assign To</Form.Label>
-              <Form.Select
-                required
-                value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-              >
-                <option value="">Select Employee</option>
-                {employees.map((employee, index) => (
-                  <option key={index} value={employee}>{employee}</option>
-                ))}
-              </Form.Select>
-            </Form.Group>
-
+                <Form.Label>Assign To</Form.Label>
+                <Form.Select
+                  required
+                  value={formData.assignedTo}
+                  onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                >
+                  <option value="">Select Employee</option>
+                  {users
+                    .filter(user =>
+                      user.role && user.role.toLowerCase() === "employee" && parseInt(user.user_id) !== currentUser.user_id
+                    )
+                    .map(user => (
+                      <option key={user.user_id} value={user.user_id}>{user.name}</option>
+                    ))
+                  }
+                </Form.Select>
+              </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Priority Level</Form.Label>
               <Form.Select 
@@ -275,7 +291,6 @@ const ManTasks = () => {
                 <option>High</option>
               </Form.Select>
             </Form.Group>
-
             <Form.Group className="mb-3">
               <Form.Label>Deadline</Form.Label>
               <Form.Control 
@@ -287,10 +302,7 @@ const ManTasks = () => {
             </Form.Group>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => {
-              setShowModal(false);
-              setEditingTask(null);
-            }}>
+            <Button variant="secondary" onClick={() => { setShowModal(false); setEditingTask(null); }}>
               Cancel
             </Button>
             <Button variant="primary" type="submit">
@@ -303,17 +315,16 @@ const ManTasks = () => {
       {/* Progress Chart Modal */}
       <Modal show={showChart} onHide={() => setShowChart(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>{selectedEmployee}'s Task Progress</Modal.Title>
+          <Modal.Title>{selectedUser ? getUserName(selectedUser) : ''} Task Progress</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div style={{ height: '300px' }}>
-            <Pie 
-              data={getEmployeeChartData(selectedEmployee)} 
-              options={{ 
-                responsive: true,
-                maintainAspectRatio: false
-              }} 
-            />
+            {selectedUser && (
+              <Pie 
+                data={getEmployeeChartData(selectedUser)} 
+                options={{ responsive: true, maintainAspectRatio: false }} 
+              />
+            )}
           </div>
         </Modal.Body>
       </Modal>
