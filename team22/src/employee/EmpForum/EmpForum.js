@@ -37,7 +37,7 @@ function TopicsList({ userId }) {
   }, []);
 
   const fetchTopics = () => {
-    fetch('http://35.214.101.36/Forum.php?process=getTopics')
+    fetch('http://35.214.101.36/Forum.php?process=getTopics') // replace big file path with 35.214.101.36
       .then(res => res.json())
       .then(data => setTopics(data))
       .catch(err => console.error('Error fetching topics:', err));
@@ -118,6 +118,9 @@ function TopicsList({ userId }) {
                   </div>
                   <div className="mb-1">
                     <strong><i className="bi bi-person-fill"></i> Created By:</strong> {topic.creator_name}
+                  </div>
+                  <div className="mb-1">
+                    <strong><i className="bi bi-clock"></i> Created On:</strong> {new Date(topic.date_time).toLocaleString()}
                   </div>
                   <div>
                     <strong><i className="bi bi-gear-fill"></i> Type:</strong> {isTechnical ? 'Technical' : 'Non-Technical'}
@@ -357,7 +360,10 @@ function TopicView({ userId }) {
               <li key={post.post_id} className="list-group-item d-flex justify-content-between align-items-center">
                 <div className="me-3">
                   <div>
-                    <strong><i className="bi bi-person-fill"></i> By:</strong> {post.user_name} (User ID: {post.user_id})
+                    <strong><i className="bi bi-person-fill"></i>Created By:</strong> {post.user_name} (User ID: {post.user_id})
+                  </div>
+                  <div className="mt-2">
+                    <strong><i className="bi bi-clock"></i> Created On:</strong> {new Date(post.date_time).toLocaleString()}
                   </div>
                   <div className="mt-2">
                     <i className="bi bi-chat-text-fill"></i> {post.content}
