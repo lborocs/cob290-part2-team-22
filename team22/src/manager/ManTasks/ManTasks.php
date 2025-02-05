@@ -19,7 +19,7 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action == 'getUsers') {
-        // Fetch users (include role for filtering)
+        // Fetch users including role
         $result = $mysqli->query("SELECT user_id, name, role FROM Users");
         $users = [];
         while ($row = $result->fetch_assoc()){
@@ -28,8 +28,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode($users);
         exit();
     } elseif ($action == 'getTasks') {
-        // Fetch all tasks from individual_tasks table
-        $result = $mysqli->query("SELECT individual_task_id, user_id, priority, deadline, status, binned FROM individual_tasks");
+        // Fetch all tasks, including the assigned_by field
+        $result = $mysqli->query("SELECT individual_task_id, user_id, priority, deadline, status, binned, assigned_by FROM individual_tasks");
         $tasks = [];
         while ($row = $result->fetch_assoc()){
             $tasks[] = $row;
@@ -48,16 +48,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action == 'createTask') {
-        // Create a new task record
+        // Create a new task record, including the assigned_by field
         $user_id = intval($data['user_id']);
         $priority = $mysqli->real_escape_string($data['priority']);
         $deadline = $mysqli->real_escape_string($data['deadline']);
+        $assigned_by = isset($data['assigned_by']) ? intval($data['assigned_by']) : 0;
         // Default status = 0 (in progress) and binned = 0
         $status = 0;
         $binned = 0;
         
-        $query = "INSERT INTO individual_tasks (user_id, priority, deadline, status, binned) 
-                  VALUES ($user_id, '$priority', '$deadline', $status, $binned)";
+        $query = "INSERT INTO individual_tasks (user_id, priority, deadline, status, binned, assigned_by) 
+                  VALUES ($user_id, '$priority', '$deadline', $status, $binned, $assigned_by)";
         if ($mysqli->query($query)) {
             echo json_encode(["success" => true, "individual_task_id" => $mysqli->insert_id]);
         } else {
@@ -65,13 +66,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     } elseif ($action == 'updateTask') {
-        // Update an existing task record
+        // Update an existing task record (do not update assigned_by)
         if (!isset($data['individual_task_id'])) {
             echo json_encode(["error" => "Task ID missing"]);
             exit();
         }
         $id = intval($data['individual_task_id']);
-        // Build update query from provided fields
         $updates = [];
         if (isset($data['priority'])) {
             $priority = $mysqli->real_escape_string($data['priority']);

@@ -24,14 +24,14 @@ const ManTasks = () => {
     completed: true,
     binned: false
   });
-  // formData corresponds to the individual_tasks table fields
+  // formData corresponds to the individual_tasks fields
   const [formData, setFormData] = useState({
     priority: 'Medium',
     deadline: '',
     assignedTo: ''
   });
 
-  // Fetch users from the backend
+  // Fetch users from the backend (include role for filtering)
   const fetchUsers = async () => {
     try {
       const res = await fetch(`${API_URL}?action=getUsers`);
@@ -58,9 +58,19 @@ const ManTasks = () => {
     fetchTasks();
   }, []);
 
-  // Group tasks by assigned user (user_id) with view filtering
+  // For managers, filter tasks so that they only see tasks they assigned
+  const filterTasksByManager = (allTasks) => {
+    if (currentUser.role === "Manager") {
+      return allTasks.filter(task => parseInt(task.assigned_by) === currentUser.user_id);
+    }
+    return allTasks;
+  };
+
+  // Group tasks by assigned user (user_id) with view filtering applied
   const groupTasks = () => {
-    return tasks.reduce((acc, task) => {
+    const filteredTasks = filterTasksByManager(tasks);
+    return filteredTasks.reduce((acc, task) => {
+      // Check view options
       if (parseInt(task.binned) === 1) {
         if (!viewOptions.binned) return acc;
       } else {
@@ -73,13 +83,13 @@ const ManTasks = () => {
     }, {});
   };
 
-  // Find a user's name by matching user_id from the users array
+  // Lookup a user's name by their user_id
   const getUserName = (userId) => {
     const user = users.find(u => parseInt(u.user_id) === parseInt(userId));
     return user ? user.name : 'Unknown';
   };
 
-  // Create or update a task
+  // Create or update a task. When creating a new task, include assigned_by as the current manager.
   const handleSubmit = async (e) => {
     e.preventDefault();
     const payload = {
@@ -87,6 +97,10 @@ const ManTasks = () => {
       priority: formData.priority,
       deadline: formData.deadline
     };
+    // When creating a new task, add assigned_by field.
+    if (!editingTask) {
+      payload.assigned_by = currentUser.user_id;
+    }
     let url = API_URL;
     if (editingTask) {
       payload.individual_task_id = editingTask.individual_task_id;
@@ -115,7 +129,7 @@ const ManTasks = () => {
     setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
   };
 
-  // Update a task field (used for status, binning, etc.)
+  // Update a task field (for status, binning, etc.)
   const updateTaskField = async (taskId, updateData) => {
     try {
       const res = await fetch(`${API_URL}?action=updateTask`, {
@@ -130,14 +144,14 @@ const ManTasks = () => {
     }
   };
 
-  // Toggle completion (status: 0 = in progress, 1 = completed)
+  // Toggle completion status (0 = in progress, 1 = completed)
   const handleStatusChange = (task) => {
-    if (parseInt(task.binned) === 1) return; // do nothing if task is binned
+    if (parseInt(task.binned) === 1) return; // do nothing if binned
     const newStatus = parseInt(task.status) === 1 ? 0 : 1;
     updateTaskField(task.individual_task_id, { status: newStatus });
   };
 
-  // Toggle binning (binned: 0 or 1)
+  // Toggle binning state (0 or 1)
   const handleBinChange = (task) => {
     const newBinned = parseInt(task.binned) === 1 ? 0 : 1;
     updateTaskField(task.individual_task_id, { binned: newBinned });
@@ -247,6 +261,9 @@ const ManTasks = () => {
                     <Card.Text>
                       <small>Status: {parseInt(task.binned) === 1 ? 'Binned' : (parseInt(task.status) === 1 ? 'Completed' : 'In Progress')}</small>
                     </Card.Text>
+                    <Card.Text>
+                      <small>Assigned by: { getUserName(task.assigned_by) }</small>
+                    </Card.Text>
                   </Card.Body>
                 </Card>
               </Col>
@@ -263,23 +280,24 @@ const ManTasks = () => {
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
             <Form.Group className="mb-3">
-                <Form.Label>Assign To</Form.Label>
-                <Form.Select
-                  required
-                  value={formData.assignedTo}
-                  onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
-                >
-                  <option value="">Select Employee</option>
-                  {users
-                    .filter(user =>
-                      user.role && user.role.toLowerCase() === "employee" && parseInt(user.user_id) !== currentUser.user_id
-                    )
-                    .map(user => (
-                      <option key={user.user_id} value={user.user_id}>{user.name}</option>
-                    ))
-                  }
-                </Form.Select>
-              </Form.Group>
+              <Form.Label>Assign To</Form.Label>
+              <Form.Select
+                required
+                value={formData.assignedTo}
+                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+              >
+                <option value="">Select Employee</option>
+                {users
+                  .filter(user =>
+                    user.role && user.role.toLowerCase() === "employee" &&
+                    parseInt(user.user_id) !== currentUser.user_id
+                  )
+                  .map(user => (
+                    <option key={user.user_id} value={user.user_id}>{user.name}</option>
+                  ))
+                }
+              </Form.Select>
+            </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Priority Level</Form.Label>
               <Form.Select 
