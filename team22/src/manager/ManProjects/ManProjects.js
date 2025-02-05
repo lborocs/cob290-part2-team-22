@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Container, Row, Col, Button, Modal, Form, Card, ProgressBar, ListGroup } from 'react-bootstrap';
+import { Container, Row, Col, Button, Modal, Form, Card, ProgressBar, ListGroup, ButtonGroup, Badge } from 'react-bootstrap';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
-import { FiPieChart } from 'react-icons/fi';
+import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff } from 'react-icons/fi';
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
@@ -16,9 +16,14 @@ const employees = [
 
 const ManProjects = () => {
   const [showModal, setShowModal] = useState(false);
-  const [showOverallChart, setShowOverallChart] = useState(false);
   const [showProjectChart, setShowProjectChart] = useState(false);
   const [selectedProject, setSelectedProject] = useState(null);
+  const [editingProject, setEditingProject] = useState(null);
+  const [viewOptions, setViewOptions] = useState({
+    active: true,
+    completed: true,
+    binned: false
+  });
   const [projects, setProjects] = useState([]);
   const [formData, setFormData] = useState({
     projectName: '',
@@ -46,20 +51,36 @@ const ManProjects = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    const newProject = {
-      id: Date.now(),
-      ...formData,
-      completed: false,
-      progress: 0,
-      createdAt: new Date().toISOString(),
-      tasks: formData.tasks.map(task => ({ 
-        ...task, 
-        completed: false,
-        id: task.id || Date.now()
-      }))
-    };
-    setProjects([...projects, newProject]);
+    if (editingProject) {
+      setProjects(projects.map(project => 
+        project.id === editingProject.id ? { 
+          ...formData, 
+          id: editingProject.id,
+          status: editingProject.status,
+          progress: editingProject.progress,
+          tasks: formData.tasks.map(task => ({
+            ...task,
+            completed: task.completed || false
+          }))
+        } : project
+      ));
+    } else {
+      const newProject = {
+        id: Date.now(),
+        ...formData,
+        status: 'active',
+        progress: 0,
+        createdAt: new Date().toISOString(),
+        tasks: formData.tasks.map(task => ({ 
+          ...task, 
+          completed: false,
+          id: task.id || Date.now()
+        }))
+      };
+      setProjects([...projects, newProject]);
+    }
     setShowModal(false);
+    setEditingProject(null);
     setFormData({
       projectName: '',
       teamLeader: '',
@@ -85,10 +106,14 @@ const ManProjects = () => {
     }));
   };
 
-  const handleToggleComplete = (projectId) => {
+  const handleStatusChange = (projectId, newStatus) => {
     setProjects(projects.map(project => 
-      project.id === projectId ? { ...project, completed: !project.completed } : project
+      project.id === projectId ? { ...project, status: newStatus } : project
     ));
+  };
+
+  const toggleView = (option) => {
+    setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
   };
 
   const calculateTimeLeft = (deadline) => {
@@ -98,25 +123,17 @@ const ManProjects = () => {
     return `${days} days left`;
   };
 
-  const getOverallChartData = () => {
-    const completedProjects = projects.filter(p => p.completed).length;
-    const activeProjects = projects.filter(p => !p.completed).length;
-
-    return {
-      labels: ['Completed Projects', 'Active Projects'],
-      datasets: [{
-        label: 'Projects',
-        data: [completedProjects, activeProjects],
-        backgroundColor: ['#4CAF50', '#607D8B'],
-        borderColor: ['#fff', '#fff']
-      }]
-    };
+  const groupProjectsByStatus = () => {
+    return projects.reduce((acc, project) => {
+      acc[project.status] = acc[project.status] || [];
+      acc[project.status].push(project);
+      return acc;
+    }, {});
   };
 
   const getProjectChartData = (project) => {
     const completedTasks = project.tasks.filter(t => t.completed).length;
     const remainingTasks = project.tasks.length - completedTasks;
-
     return {
       labels: ['Completed Tasks', 'Remaining Tasks'],
       datasets: [{
@@ -127,108 +144,196 @@ const ManProjects = () => {
     };
   };
 
+  const getStatusBadge = (status) => {
+    switch(status) {
+      case 'completed': return 'success';
+      case 'binned': return 'danger';
+      default: return 'primary';
+    }
+  };
+
   return (
     <Container>
-      <h1 className="text-center my-4">Manager's Projects Dashboard</h1>
+      <h1 className="text-center my-4">Projects Management</h1>
       
-      <Row className="mb-4 align-items-center">
-        <Col md={6}>
+      <div className="d-flex justify-content-between mb-4">
+        <div>
           <Button variant="primary" onClick={() => setShowModal(true)}>
             Create New Project
           </Button>
           <Button 
             variant="outline-secondary" 
             className="ms-2"
-            onClick={() => setShowOverallChart(true)}
+            onClick={() => setShowProjectChart(true)}
           >
             <FiPieChart className="me-2" />
-            View Overall Progress
+            Progress Overview
           </Button>
-        </Col>
-      </Row>
+        </div>
+        
+        <ButtonGroup>
+          <Button 
+            variant={viewOptions.active ? 'primary' : 'secondary'} 
+            onClick={() => toggleView('active')}
+          >
+            {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active
+          </Button>
+          <Button 
+            variant={viewOptions.completed ? 'success' : 'secondary'} 
+            onClick={() => toggleView('completed')}
+          >
+            {viewOptions.completed ? <FiEye /> : <FiEyeOff />} Completed
+          </Button>
+          <Button 
+            variant={viewOptions.binned ? 'danger' : 'secondary'} 
+            onClick={() => toggleView('binned')}
+          >
+            {viewOptions.binned ? <FiEye /> : <FiEyeOff />} Binned
+          </Button>
+        </ButtonGroup>
+      </div>
 
-      {/* Active Projects Section */}
-      <h3 className="mt-4">Active Projects</h3>
-      <Row className="mt-2">
-        {projects.filter(p => !p.completed).map(project => (
-          <ProjectCard 
-            key={project.id}
-            project={project}
-            onToggleComplete={handleToggleComplete}
-            onTaskToggle={handleTaskToggle}
-            calculateTimeLeft={calculateTimeLeft}
-            onViewChart={() => {
-              setSelectedProject(project);
-              setShowProjectChart(true);
-            }}
-          />
-        ))}
-      </Row>
+      {Object.entries(groupProjectsByStatus()).map(([status, projects]) => (
+        viewOptions[status] && (
+          <div key={status} className="mb-5">
+            <h3 className="text-capitalize mb-3">
+              {status} Projects
+              <Badge bg={getStatusBadge(status)} className="ms-2">
+                {projects.length}
+              </Badge>
+            </h3>
+            <Row className="g-3">
+              {projects.map(project => (
+                <Col md={6} lg={4} key={project.id}>
+                  <Card className={`h-100 border-${getStatusBadge(project.status)}`}>
+                    <Card.Body>
+                      <div className="d-flex justify-content-between align-items-start mb-3">
+                        <Card.Title className="fs-5 m-0">{project.projectName}</Card.Title>
+                        <div className="d-flex gap-1">
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            onClick={() => {
+                              setEditingProject(project);
+                              setFormData({
+                                ...project,
+                                tasks: project.tasks
+                              });
+                              setShowModal(true);
+                            }}
+                          >
+                            <FiEdit />
+                          </Button>
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            className="text-danger"
+                            onClick={() => handleStatusChange(project.id, 'binned')}
+                          >
+                            <FiTrash2 />
+                          </Button>
+                        </div>
+                      </div>
 
-      {/* Completed Projects Section */}
-      {projects.filter(p => p.completed).length > 0 && (
-        <>
-          <h3 className="mt-5">Completed Projects</h3>
-          <Row className="mt-2">
-            {projects.filter(p => p.completed).map(project => (
-              <ProjectCard 
-                key={project.id}
-                project={project}
-                onToggleComplete={handleToggleComplete}
-                onTaskToggle={handleTaskToggle}
-                calculateTimeLeft={calculateTimeLeft}
-                onViewChart={() => {
-                  setSelectedProject(project);
-                  setShowProjectChart(true);
-                }}
-              />
-            ))}
-          </Row>
-        </>
-      )}
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <ProgressBar 
+                          now={project.progress} 
+                          label={`${Math.round(project.progress)}%`} 
+                          variant={getStatusBadge(project.status)}
+                          style={{ width: '70%' }}
+                        />
+                        <Button 
+                          variant="outline-secondary" 
+                          size="sm"
+                          onClick={() => {
+                            setSelectedProject(project);
+                            setShowProjectChart(true);
+                          }}
+                        >
+                          <FiPieChart />
+                        </Button>
+                      </div>
 
-      {/* Overall Progress Modal */}
-      <Modal show={showOverallChart} onHide={() => setShowOverallChart(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Overall Progress</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="chart-container" style={{ height: '300px' }}>
-            <Pie 
-              data={getOverallChartData()} 
-              options={{ 
-                responsive: true,
-                maintainAspectRatio: false
-              }} 
-            />
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <Badge bg={project.priority === 'High' ? 'danger' : project.priority === 'Medium' ? 'warning' : 'success'}>
+                          {project.priority} Priority
+                        </Badge>
+                        {project.status === 'binned' ? (
+                          <Button 
+                            variant="success" 
+                            size="sm"
+                            onClick={() => handleStatusChange(project.id, 'active')}
+                          >
+                            <FiArchive className="me-1" /> Restore
+                          </Button>
+                        ) : (
+                          <Button 
+                            variant={project.status === 'completed' ? 'secondary' : 'success'} 
+                            size="sm"
+                            onClick={() => handleStatusChange(project.id, project.status === 'completed' ? 'active' : 'completed')}
+                          >
+                            {project.status === 'completed' ? 'Mark Active' : 'Mark Complete'}
+                          </Button>
+                        )}
+                      </div>
+
+                      <div className="mb-3">
+                        <small className="text-muted d-block">
+                          Team Leader: {project.teamLeader}
+                        </small>
+                        <small className="text-muted d-block">
+                          Deadline: {new Date(project.deadline).toLocaleDateString()} ({calculateTimeLeft(project.deadline)})
+                        </small>
+                      </div>
+
+                      <Card.Text className="text-muted small mb-3">
+                        {project.description}
+                      </Card.Text>
+
+                      <h6 className="small">Assigned Team</h6>
+                      <div className="mb-3">
+                        {project.employees.map(employee => (
+                          <Badge key={employee} bg="secondary" className="me-1">
+                            {employee}
+                          </Badge>
+                        ))}
+                      </div>
+
+                      <h6 className="small">Tasks</h6>
+                      <ListGroup variant="flush">
+                        {project.tasks.map(task => (
+                          <ListGroup.Item key={task.id} className="px-0">
+                            <div className="d-flex justify-content-between align-items-center">
+                              <Form.Check 
+                                type="checkbox"
+                                checked={task.completed}
+                                onChange={() => handleTaskToggle(project.id, task.id)}
+                                label={task.name}
+                                disabled={project.status === 'binned'}
+                              />
+                              {task.assignee && (
+                                <Badge bg="info">{task.assignee}</Badge>
+                              )}
+                            </div>
+                          </ListGroup.Item>
+                        ))}
+                      </ListGroup>
+                    </Card.Body>
+                  </Card>
+                </Col>
+              ))}
+            </Row>
           </div>
-        </Modal.Body>
-      </Modal>
+        )
+      ))}
 
-      {/* Project Progress Modal */}
-      <Modal show={showProjectChart} onHide={() => setShowProjectChart(false)}>
+      {/* Project Creation/Edit Modal */}
+      <Modal show={showModal} onHide={() => {
+        setShowModal(false);
+        setEditingProject(null);
+      }} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>{selectedProject?.projectName} Progress</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {selectedProject && (
-            <div className="chart-container" style={{ height: '300px' }}>
-              <Pie 
-                data={getProjectChartData(selectedProject)} 
-                options={{ 
-                  responsive: true,
-                  maintainAspectRatio: false
-                }} 
-              />
-            </div>
-          )}
-        </Modal.Body>
-      </Modal>
-
-      {/* Project Creation Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} size="lg">
-        <Modal.Header closeButton>
-          <Modal.Title>Create New Project</Modal.Title>
+          <Modal.Title>{editingProject ? 'Edit Project' : 'Create New Project'}</Modal.Title>
         </Modal.Header>
         <Form onSubmit={handleSubmit}>
           <Modal.Body>
@@ -329,117 +434,39 @@ const ManProjects = () => {
             </Button>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => setShowModal(false)}>
+            <Button variant="secondary" onClick={() => {
+              setShowModal(false);
+              setEditingProject(null);
+            }}>
               Close
             </Button>
             <Button variant="primary" type="submit">
-              Create Project
+              {editingProject ? 'Save Changes' : 'Create Project'}
             </Button>
           </Modal.Footer>
         </Form>
       </Modal>
-    </Container>
-  );
-};
 
-const ProjectCard = ({ project, onToggleComplete, onTaskToggle, calculateTimeLeft, onViewChart }) => {
-  const completedTasks = project.tasks.filter(t => t.completed);
-  const activeTasks = project.tasks.filter(t => !t.completed);
-
-  return (
-    <Col md={6} lg={4} className="mb-4">
-      <Card className={`h-100 ${project.completed ? 'border-success' : ''}`}>
-        <Card.Body>
-          <div className="d-flex justify-content-between align-items-start mb-3">
-            <Card.Title className="fs-5 m-0">{project.projectName}</Card.Title>
-            <Button 
-              variant={project.completed ? 'success' : 'outline-secondary'}
-              size="sm"
-              onClick={() => onToggleComplete(project.id)}
-            >
-              {project.completed ? 'Completed ✓' : 'Mark Complete'}
-            </Button>
-          </div>
-
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <ProgressBar 
-              now={project.progress} 
-              label={`${Math.round(project.progress)}%`} 
-              variant={project.completed ? 'success' : 'primary'}
-              style={{ width: '70%' }}
-            />
-            <Button 
-              variant="outline-secondary" 
-              size="sm"
-              onClick={onViewChart}
-            >
-              <FiPieChart />
-            </Button>
-          </div>
-
-          <Card.Subtitle className="text-muted small">
-            <div className="d-flex justify-content-between">
-              <span>Team Leader: {project.teamLeader}</span>
-              <span className={`badge ${project.priority === 'High' ? 'bg-danger' : 
-                                project.priority === 'Medium' ? 'bg-warning' : 'bg-success'}`}>
-                {project.priority}
-              </span>
+      {/* Project Progress Modal */}
+      <Modal show={showProjectChart} onHide={() => setShowProjectChart(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>{selectedProject?.projectName} Progress</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedProject && (
+            <div style={{ height: '300px' }}>
+              <Pie 
+                data={getProjectChartData(selectedProject)} 
+                options={{ 
+                  responsive: true,
+                  maintainAspectRatio: false
+                }} 
+              />
             </div>
-            <div className="mt-1">
-              <small>Team: {project.employees.join(', ')}</small>
-            </div>
-          </Card.Subtitle>
-
-          <div className="my-3">
-            <small className="d-block text-muted">
-              Deadline: {new Date(project.deadline).toLocaleDateString()} ({calculateTimeLeft(project.deadline)})
-            </small>
-          </div>
-
-          <Card.Text className="text-muted small mb-3">
-            {project.description}
-          </Card.Text>
-
-          <h6 className="small">Active Tasks ({activeTasks.length})</h6>
-          <ListGroup variant="flush" className="mb-3">
-            {activeTasks.map(task => (
-              <ListGroup.Item key={task.id} className="px-0">
-                <Form.Check 
-                  type="checkbox"
-                  checked={task.completed}
-                  onChange={() => onTaskToggle(project.id, task.id)}
-                  label={task.name}
-                  disabled={project.completed}
-                />
-                {task.assignee && 
-                  <small className="text-muted ms-3">Assigned to: {task.assignee}</small>}
-              </ListGroup.Item>
-            ))}
-          </ListGroup>
-
-          {completedTasks.length > 0 && (
-            <>
-              <h6 className="small">Completed Tasks ({completedTasks.length})</h6>
-              <ListGroup variant="flush">
-                {completedTasks.map(task => (
-                  <ListGroup.Item key={task.id} className="px-0 bg-light">
-                    <Form.Check 
-                      type="checkbox"
-                      checked={true}
-                      onChange={() => onTaskToggle(project.id, task.id)}
-                      label={task.name}
-                      disabled={project.completed}
-                    />
-                    {task.assignee && 
-                      <small className="text-muted ms-3">Assigned to: {task.assignee}</small>}
-                  </ListGroup.Item>
-                ))}
-              </ListGroup>
-            </>
           )}
-        </Card.Body>
-      </Card>
-    </Col>
+        </Modal.Body>
+      </Modal>
+    </Container>
   );
 };
 
