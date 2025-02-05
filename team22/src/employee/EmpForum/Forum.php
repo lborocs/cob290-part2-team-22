@@ -84,7 +84,7 @@ function getPosts($mysqli) {
         return;
     }
 
-    $sql = "SELECT p.post_id, p.content, p.user_id, u.name AS user_name
+    $sql = "SELECT p.post_id, p.content, p.user_id, u.name AS user_name, p.date_time
             FROM Forum_Posts p
             JOIN Users u ON p.user_id = u.user_id
             WHERE p.topic_id = $topic_id
@@ -104,7 +104,7 @@ function getPosts($mysqli) {
 // Function for getTopics
 function getTopics($mysqli) {
     $sql = "SELECT t.topic_id, t.title, t.description, t.technical, t.created_by,
-                   u.name AS creator_name
+                   u.name AS creator_name, t.date_time
             FROM Forum_Topics t
             JOIN Users u ON t.created_by = u.user_id";
 
