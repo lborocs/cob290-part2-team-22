@@ -1,4 +1,7 @@
-import React, { useState } from 'react';
+// need to adjust so that if someone is only a team leader of a binned project, their status goes back to employee. 
+// potentially fully remove projects option aswell. 
+
+import React, { useState, useEffect } from 'react';
 import { Container, Row, Col, Button, Modal, Form, Card, ProgressBar, ListGroup, ButtonGroup, Badge } from 'react-bootstrap';
 import { Pie } from 'react-chartjs-2';
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
@@ -6,13 +9,11 @@ import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff } from 'react-
 
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-const employees = [
-  'Micheal Jones',
-  'Alice Smith',
-  'Emma Khan',
-  'Tom Clark',
-  'Raj Patel'
-];
+// API URL pointing to our backend PHP file
+const API_URL = 'http://35.214.101.36/ManProjects.php';
+
+// Example current manager info
+const currentUser = { user_id: 3, role: "Manager", name: "John Manager" };
 
 const ManProjects = () => {
   const [showModal, setShowModal] = useState(false);
@@ -25,123 +26,60 @@ const ManProjects = () => {
     binned: false
   });
   const [projects, setProjects] = useState([]);
+  const [users, setUsers] = useState([]);
+  // formData holds the project fields
   const [formData, setFormData] = useState({
     projectName: '',
+    description: '',
     teamLeader: '',
-    employees: [],
+    employees: [], // array of user IDs
     priority: 'Medium',
     deadline: '',
-    description: '',
     tasks: [{ name: '', assignee: '', id: Date.now() }]
   });
 
-  const handleAddTask = () => {
-    setFormData(prev => ({
-      ...prev,
-      tasks: [...prev.tasks, { name: '', assignee: '', id: Date.now() }]
-    }));
-  };
-
-  const handleTaskChange = (index, field, value) => {
-    const newTasks = formData.tasks.map((task, i) => 
-      i === index ? { ...task, [field]: value } : task
-    );
-    setFormData(prev => ({ ...prev, tasks: newTasks }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (editingProject) {
-      setProjects(projects.map(project => 
-        project.id === editingProject.id ? { 
-          ...formData, 
-          id: editingProject.id,
-          status: editingProject.status,
-          progress: editingProject.progress,
-          tasks: formData.tasks.map(task => ({
-            ...task,
-            completed: task.completed || false
-          }))
-        } : project
-      ));
-    } else {
-      const newProject = {
-        id: Date.now(),
-        ...formData,
-        status: 'active',
-        progress: 0,
-        createdAt: new Date().toISOString(),
-        tasks: formData.tasks.map(task => ({ 
-          ...task, 
-          completed: false,
-          id: task.id || Date.now()
-        }))
-      };
-      setProjects([...projects, newProject]);
+  // Fetch users (including role info) from backend
+  const fetchUsers = async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=getUsers`);
+      const data = await res.json();
+      setUsers(data);
+    } catch (err) {
+      console.error('Error fetching users', err);
     }
-    setShowModal(false);
-    setEditingProject(null);
-    setFormData({
-      projectName: '',
-      teamLeader: '',
-      employees: [],
-      priority: 'Medium',
-      deadline: '',
-      description: '',
-      tasks: [{ name: '', assignee: '', id: Date.now() }]
-    });
   };
 
-  const handleTaskToggle = (projectId, taskId) => {
-    setProjects(projects.map(project => {
-      if (project.id === projectId) {
-        const updatedTasks = project.tasks.map(task => 
-          task.id === taskId ? { ...task, completed: !task.completed } : task
-        );
-        const completedCount = updatedTasks.filter(t => t.completed).length;
-        const progress = (completedCount / updatedTasks.length) * 100;
-        return { ...project, tasks: updatedTasks, progress };
-      }
-      return project;
-    }));
+  // Fetch projects from backend
+  const fetchProjects = async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=getProjects`);
+      const data = await res.json();
+      setProjects(data);
+    } catch (err) {
+      console.error('Error fetching projects', err);
+    }
   };
 
-  const handleStatusChange = (projectId, newStatus) => {
-    setProjects(projects.map(project => 
-      project.id === projectId ? { ...project, status: newStatus } : project
-    ));
+  useEffect(() => {
+    fetchUsers();
+    fetchProjects();
+  }, []);
+
+  // Derive project status from completed and binned fields
+  const getProjectStatus = (project) => {
+    if (parseInt(project.binned) === 1) return 'binned';
+    if (parseInt(project.completed) === 1) return 'completed';
+    return 'active';
   };
 
-  const toggleView = (option) => {
-    setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
-  };
-
-  const calculateTimeLeft = (deadline) => {
-    const diff = new Date(deadline) - new Date();
-    if (diff < 0) return 'Overdue';
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    return `${days} days left`;
-  };
-
+  // Group projects by status
   const groupProjectsByStatus = () => {
     return projects.reduce((acc, project) => {
-      acc[project.status] = acc[project.status] || [];
-      acc[project.status].push(project);
+      const status = getProjectStatus(project);
+      acc[status] = acc[status] || [];
+      acc[status].push(project);
       return acc;
     }, {});
-  };
-
-  const getProjectChartData = (project) => {
-    const completedTasks = project.tasks.filter(t => t.completed).length;
-    const remainingTasks = project.tasks.length - completedTasks;
-    return {
-      labels: ['Completed Tasks', 'Remaining Tasks'],
-      datasets: [{
-        data: [completedTasks, remainingTasks],
-        backgroundColor: ['#4CAF50', '#607D8B'],
-        borderColor: ['#fff', '#fff']
-      }]
-    };
   };
 
   const getStatusBadge = (status) => {
@@ -152,75 +90,210 @@ const ManProjects = () => {
     }
   };
 
+  // Overall Projects Progress: pie chart of completed vs active projects
+  const getOverallProjectChartData = () => {
+    const total = projects.length;
+    const completed = projects.filter(project => parseInt(project.completed) === 1).length;
+    const active = total - completed;
+    return {
+      labels: ['Completed Projects', 'Active Projects'],
+      datasets: [{
+        data: [completed, active],
+        backgroundColor: ['#4CAF50', '#607D8B'],
+        borderColor: ['#fff', '#fff']
+      }]
+    };
+  };
+
+  // Create or update a project
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const payload = {
+      projectName: formData.projectName,
+      description: formData.description,
+      priority: formData.priority,
+      deadline: formData.deadline,
+      teamLeader: formData.teamLeader,
+      employees: formData.employees, // array of user IDs
+      tasks: formData.tasks // array of tasks: each has name and assignee
+    };
+    // When creating a new project, include the manager_id from currentUser
+    if (!editingProject) {
+      payload.manager_id = currentUser.user_id;
+    }
+    let url = API_URL;
+    if (editingProject) {
+      payload.project_id = editingProject.project_id;
+      url += '?action=updateProject';
+    } else {
+      url += '?action=createProject';
+    }
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      await res.json();
+      fetchProjects();
+    } catch (err) {
+      console.error('Error saving project', err);
+    }
+    setShowModal(false);
+    setEditingProject(null);
+    setFormData({
+      projectName: '',
+      description: '',
+      teamLeader: '',
+      employees: [],
+      priority: 'Medium',
+      deadline: '',
+      tasks: [{ name: '', assignee: '', id: Date.now() }]
+    });
+  };
+
+  // Update project status fields (completed, binned)
+  const updateProjectField = async (projectId, updateData) => {
+    try {
+      const res = await fetch(`${API_URL}?action=updateProjectField`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ project_id: projectId, ...updateData })
+      });
+      await res.json();
+      fetchProjects();
+    } catch (err) {
+      console.error('Error updating project', err);
+    }
+  };
+
+  const handleStatusChange = (projectId, newStatus) => {
+    if (newStatus === 'binned') {
+      updateProjectField(projectId, { binned: 1 });
+    } else if (newStatus === 'active') {
+      updateProjectField(projectId, { completed: 0, binned: 0 });
+    } else if (newStatus === 'completed') {
+      updateProjectField(projectId, { completed: 1, binned: 0 });
+    }
+  };
+
+  const getProjectChartData = (project) => {
+    const tasks = project.tasks || [];
+    const completedTasks = tasks.filter(t => parseInt(t.status) === 1).length;
+    const remainingTasks = tasks.length - completedTasks;
+    return {
+      labels: ['Completed Tasks', 'Remaining Tasks'],
+      datasets: [{
+        data: [completedTasks, remainingTasks],
+        backgroundColor: ['#4CAF50', '#607D8B'],
+        borderColor: ['#fff', '#fff']
+      }]
+    };
+  };
+
+  const getUserName = (userId) => {
+    const user = users.find(u => parseInt(u.user_id) === parseInt(userId));
+    return user ? user.name : 'Unknown';
+  };
+
+  // Add a new task row in the form
+  const handleAddTask = () => {
+    setFormData(prev => ({
+      ...prev,
+      tasks: [...prev.tasks, { name: '', assignee: '', id: Date.now() }]
+    }));
+  };
+
+  // Update a task field in the form tasks array
+  const handleTaskChange = (index, field, value) => {
+    const newTasks = formData.tasks.map((task, i) =>
+      i === index ? { ...task, [field]: value } : task
+    );
+    setFormData(prev => ({ ...prev, tasks: newTasks }));
+  };
+
   return (
     <Container>
       <h1 className="text-center my-4">Projects Management</h1>
       
       <div className="d-flex justify-content-between mb-4">
         <div>
-          <Button variant="primary" onClick={() => setShowModal(true)}>
-            Create New Project
-          </Button>
           <Button 
-            variant="outline-secondary" 
-            className="ms-2"
-            onClick={() => setShowProjectChart(true)}
+            variant="primary" 
+            onClick={() => {
+              // Clear selectedProject to show overall progress chart
+              setSelectedProject(null);
+              setShowProjectChart(true);
+            }}
           >
-            <FiPieChart className="me-2" />
             Progress Overview
           </Button>
+          <Button variant="primary" className="ms-2" onClick={() => setShowModal(true)}>
+            Create New Project
+          </Button>
         </div>
-        
         <ButtonGroup>
           <Button 
             variant={viewOptions.active ? 'primary' : 'secondary'} 
-            onClick={() => toggleView('active')}
+            onClick={() => setViewOptions(prev => ({ ...prev, active: !prev.active }))}
           >
             {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active
           </Button>
           <Button 
             variant={viewOptions.completed ? 'success' : 'secondary'} 
-            onClick={() => toggleView('completed')}
+            onClick={() => setViewOptions(prev => ({ ...prev, completed: !prev.completed }))}
           >
             {viewOptions.completed ? <FiEye /> : <FiEyeOff />} Completed
           </Button>
           <Button 
             variant={viewOptions.binned ? 'danger' : 'secondary'} 
-            onClick={() => toggleView('binned')}
+            onClick={() => setViewOptions(prev => ({ ...prev, binned: !prev.binned }))}
           >
             {viewOptions.binned ? <FiEye /> : <FiEyeOff />} Binned
           </Button>
         </ButtonGroup>
       </div>
 
-      {Object.entries(groupProjectsByStatus()).map(([status, projects]) => (
+      {Object.entries(groupProjectsByStatus()).map(([status, projList]) => (
         viewOptions[status] && (
           <div key={status} className="mb-5">
             <h3 className="text-capitalize mb-3">
               {status} Projects
               <Badge bg={getStatusBadge(status)} className="ms-2">
-                {projects.length}
+                {projList.length}
               </Badge>
             </h3>
             <Row className="g-3">
-              {projects.map(project => (
-                <Col md={6} lg={4} key={project.id}>
-                  <Card className={`h-100 border-${getStatusBadge(project.status)}`}>
+              {projList.map(project => (
+                <Col md={6} lg={4} key={project.project_id}>
+                  <Card className={`h-100 border-${getStatusBadge(getProjectStatus(project))}`}>
                     <Card.Body>
                       <div className="d-flex justify-content-between align-items-start mb-3">
-                        <Card.Title className="fs-5 m-0">{project.projectName}</Card.Title>
+                        <Card.Title className="fs-5 m-0">{project.name}</Card.Title>
                         <div className="d-flex gap-1">
                           <Button 
                             variant="link" 
                             size="sm" 
                             onClick={() => {
+                              // Disable editing if project is binned
+                              if(getProjectStatus(project) === 'binned') return;
                               setEditingProject(project);
                               setFormData({
-                                ...project,
-                                tasks: project.tasks
+                                projectName: project.name,
+                                description: project.description,
+                                teamLeader: project.team_leader_id,
+                                employees: project.employees, // as returned from API
+                                priority: project.priority,
+                                deadline: project.deadline,
+                                tasks: project.tasks.map(task => ({
+                                  name: task.task_name,
+                                  assignee: task.user_id,
+                                  id: task.task_id
+                                }))
                               });
                               setShowModal(true);
                             }}
+                            disabled={getProjectStatus(project) === 'binned'}
                           >
                             <FiEdit />
                           </Button>
@@ -228,7 +301,7 @@ const ManProjects = () => {
                             variant="link" 
                             size="sm" 
                             className="text-danger"
-                            onClick={() => handleStatusChange(project.id, 'binned')}
+                            onClick={() => handleStatusChange(project.project_id, 'binned')}
                           >
                             <FiTrash2 />
                           </Button>
@@ -237,9 +310,9 @@ const ManProjects = () => {
 
                       <div className="d-flex justify-content-between align-items-center mb-3">
                         <ProgressBar 
-                          now={project.progress} 
-                          label={`${Math.round(project.progress)}%`} 
-                          variant={getStatusBadge(project.status)}
+                          now={project.progress ? project.progress : 0} 
+                          label={`${Math.round(project.progress || 0)}%`} 
+                          variant={getStatusBadge(getProjectStatus(project))}
                           style={{ width: '70%' }}
                         />
                         <Button 
@@ -258,31 +331,35 @@ const ManProjects = () => {
                         <Badge bg={project.priority === 'High' ? 'danger' : project.priority === 'Medium' ? 'warning' : 'success'}>
                           {project.priority} Priority
                         </Badge>
-                        {project.status === 'binned' ? (
+                        {getStatusBadge(getProjectStatus(project)) === 'danger' ? (
                           <Button 
                             variant="success" 
                             size="sm"
-                            onClick={() => handleStatusChange(project.id, 'active')}
+                            onClick={() => handleStatusChange(project.project_id, 'active')}
                           >
                             <FiArchive className="me-1" /> Restore
                           </Button>
                         ) : (
                           <Button 
-                            variant={project.status === 'completed' ? 'secondary' : 'success'} 
+                            variant={getStatusBadge(getProjectStatus(project)) === 'success' ? 'secondary' : 'success'} 
                             size="sm"
-                            onClick={() => handleStatusChange(project.id, project.status === 'completed' ? 'active' : 'completed')}
+                            onClick={() => handleStatusChange(project.project_id, getProjectStatus(project) === 'completed' ? 'active' : 'completed')}
                           >
-                            {project.status === 'completed' ? 'Mark Active' : 'Mark Complete'}
+                            {getStatusBadge(getProjectStatus(project)) === 'success' ? 'Mark Active' : 'Mark Complete'}
                           </Button>
                         )}
                       </div>
 
                       <div className="mb-3">
                         <small className="text-muted d-block">
-                          Team Leader: {project.teamLeader}
+                          Team Leader: {getUserName(project.team_leader_id)}
                         </small>
                         <small className="text-muted d-block">
-                          Deadline: {new Date(project.deadline).toLocaleDateString()} ({calculateTimeLeft(project.deadline)})
+                          Deadline: {new Date(project.deadline).toLocaleDateString()} 
+                          ({(new Date(project.deadline) - new Date()) < 0 ? 'Overdue' : Math.floor((new Date(project.deadline) - new Date()) / (1000 * 60 * 60 * 24)) + ' days left'})
+                        </small>
+                        <small className="text-muted d-block">
+                          Assigned by: {project.managerName}
                         </small>
                       </div>
 
@@ -292,27 +369,34 @@ const ManProjects = () => {
 
                       <h6 className="small">Assigned Team</h6>
                       <div className="mb-3">
-                        {project.employees.map(employee => (
-                          <Badge key={employee} bg="secondary" className="me-1">
-                            {employee}
+                        {project.employees && project.employees.map((emp, idx) => (
+                          <Badge key={idx} bg="secondary" className="me-1">
+                            {emp}
                           </Badge>
                         ))}
                       </div>
 
                       <h6 className="small">Tasks</h6>
                       <ListGroup variant="flush">
-                        {project.tasks.map(task => (
-                          <ListGroup.Item key={task.id} className="px-0">
+                        {project.tasks && project.tasks.map(task => (
+                          <ListGroup.Item key={task.task_id} className="px-0">
                             <div className="d-flex justify-content-between align-items-center">
                               <Form.Check 
                                 type="checkbox"
-                                checked={task.completed}
-                                onChange={() => handleTaskToggle(project.id, task.id)}
-                                label={task.name}
-                                disabled={project.status === 'binned'}
+                                checked={parseInt(task.status) === 1}
+                                onChange={() => {
+                                  const newStatus = parseInt(task.status) === 1 ? 0 : 1;
+                                  fetch(`${API_URL}?action=updateProjectTask`, {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({ task_id: task.task_id, status: newStatus })
+                                  }).then(() => fetchProjects());
+                                }}
+                                label={task.task_name}
+                                disabled={getProjectStatus(project) === 'binned'}
                               />
                               {task.assignee && (
-                                <Badge bg="info">{task.assignee}</Badge>
+                                <Badge bg="info">{getUserName(task.assignee)}</Badge>
                               )}
                             </div>
                           </ListGroup.Item>
@@ -328,10 +412,7 @@ const ManProjects = () => {
       ))}
 
       {/* Project Creation/Edit Modal */}
-      <Modal show={showModal} onHide={() => {
-        setShowModal(false);
-        setEditingProject(null);
-      }} size="lg">
+      <Modal show={showModal} onHide={() => { setShowModal(false); setEditingProject(null); }} size="lg">
         <Modal.Header closeButton>
           <Modal.Title>{editingProject ? 'Edit Project' : 'Create New Project'}</Modal.Title>
         </Modal.Header>
@@ -354,9 +435,12 @@ const ManProjects = () => {
                 onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
               >
                 <option value="">Select Team Leader</option>
-                {employees.map((employee, index) => (
-                  <option key={index} value={employee}>{employee}</option>
-                ))}
+                {users
+                  .filter(user => user.role && user.role.toLowerCase() !== "manager")
+                  .map(user => (
+                    <option key={user.user_id} value={user.user_id}>{user.name}</option>
+                  ))
+                }
               </Form.Select>
             </Form.Group>
 
@@ -370,9 +454,12 @@ const ManProjects = () => {
                   employees: Array.from(e.target.selectedOptions, option => option.value)
                 })}
               >
-                {employees.map((employee, index) => (
-                  <option key={index} value={employee}>{employee}</option>
-                ))}
+                {users
+                  .filter(user => user.role && user.role.toLowerCase() !== "manager")
+                  .map(user => (
+                    <option key={user.user_id} value={user.user_id}>{user.name}</option>
+                  ))
+                }
               </Form.Select>
               <Form.Text className="text-muted">
                 Hold CTRL/CMD to select multiple employees
@@ -423,9 +510,12 @@ const ManProjects = () => {
                   onChange={(e) => handleTaskChange(index, 'assignee', e.target.value)}
                 >
                   <option value="">Unassigned</option>
-                  {formData.employees.map((employee, idx) => (
-                    <option key={idx} value={employee}>{employee}</option>
-                  ))}
+                  {users
+                    .filter(user => user.role && user.role.toLowerCase() !== "manager")
+                    .map(user => (
+                      <option key={user.user_id} value={user.user_id}>{user.name}</option>
+                    ))
+                  }
                 </Form.Select>
               </div>
             ))}
@@ -434,10 +524,7 @@ const ManProjects = () => {
             </Button>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="secondary" onClick={() => {
-              setShowModal(false);
-              setEditingProject(null);
-            }}>
+            <Button variant="secondary" onClick={() => { setShowModal(false); setEditingProject(null); }}>
               Close
             </Button>
             <Button variant="primary" type="submit">
@@ -448,22 +535,22 @@ const ManProjects = () => {
       </Modal>
 
       {/* Project Progress Modal */}
-      <Modal show={showProjectChart} onHide={() => setShowProjectChart(false)}>
+      <Modal show={showProjectChart} onHide={() => { setShowProjectChart(false); setSelectedProject(null); }}>
         <Modal.Header closeButton>
-          <Modal.Title>{selectedProject?.projectName} Progress</Modal.Title>
+          <Modal.Title>
+            {selectedProject ? `${selectedProject.name} Progress` : "Overall Projects Progress"}
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedProject && (
-            <div style={{ height: '300px' }}>
-              <Pie 
-                data={getProjectChartData(selectedProject)} 
-                options={{ 
-                  responsive: true,
-                  maintainAspectRatio: false
-                }} 
-              />
-            </div>
-          )}
+          <div style={{ height: '300px' }}>
+            <Pie 
+              data={ selectedProject ? getProjectChartData(selectedProject) : getOverallProjectChartData() } 
+              options={{ 
+                responsive: true,
+                maintainAspectRatio: false
+              }} 
+            />
+          </div>
         </Modal.Body>
       </Modal>
     </Container>
@@ -471,3 +558,4 @@ const ManProjects = () => {
 };
 
 export default ManProjects;
+
