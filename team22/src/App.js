@@ -35,7 +35,7 @@ function App() {
       {userRole ? (
         <div className="d-flex">
           {/* Sidebar */}
-          {userRole === "Employee" ? <EmpNavbar /> : <ManNavbar />}
+          {userRole === "Manager" ? <ManNavbar /> : <EmpNavbar />}
 
           {/* Main Content */}
           <div
@@ -64,6 +64,18 @@ function App() {
                   <Route path="/forum/*" element={<ManForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                   <Route path="/settings" element={<ManSettings userId={userId} />} />
+                </>
+              )}
+
+               {/* Team Leader Routes */}
+               {userRole === "Team Leader" && (
+                <>
+                  <Route path="/" element={<EmpHome userId={userId} />} />
+                  <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
+                  <Route path="/forum/*" element={<EmpForum userId={userId} />} />
+                  <Route path="/todolist" element={<TodoList userId={userId} />} />
+                  <Route path="/settings" element={<EmpSettings userId={userId} />} />
+
                 </>
               )}
 
