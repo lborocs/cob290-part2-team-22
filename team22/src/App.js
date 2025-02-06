@@ -46,7 +46,7 @@ function App() {
               {/* Employee Routes */}
               {userRole === "Employee" && (
                 <>
-                  <Route path="/" element={<EmpHome userId={userId} />} />
+                  <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
@@ -57,7 +57,7 @@ function App() {
               {/* Manager Routes */}
               {userRole === "Manager" && (
                 <>
-                  <Route path="/" element={<ManHome />} />
+                  <Route path="/" element={<ManHome userId={userId} userRole={userRole} />} />
                   <Route path="/projects" element={<ManProjects />} />
                   <Route path="/tasks" element={<ManTasks />} />
                   <Route path="/employees" element={<ManEmployees />} />
@@ -70,12 +70,11 @@ function App() {
                {/* Team Leader Routes */}
                {userRole === "Team Leader" && (
                 <>
-                  <Route path="/" element={<EmpHome userId={userId} />} />
+                  <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                   <Route path="/settings" element={<EmpSettings userId={userId} />} />
-
                 </>
               )}
 
