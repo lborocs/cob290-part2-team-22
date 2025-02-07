@@ -42,7 +42,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $tasks[] = $t;
             }
             $project['tasks'] = $tasks;
-            // Get assigned employees (names) via project_users join Users
+            // Get assigned employees (names) for this project from project_users joined with Users
             $puResult = $mysqli->query("SELECT pu.user_id, u.name FROM project_users pu JOIN Users u ON pu.user_id = u.user_id WHERE pu.project_id = $project_id");
             $employees = [];
             while ($emp = $puResult->fetch_assoc()){
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $tlResult = $mysqli->query("SELECT name FROM Users WHERE user_id = " . $project['team_leader_id']);
             $tl = $tlResult->fetch_assoc();
             $project['teamLeader'] = $tl ? $tl['name'] : '';
-            // Get manager name
+            // Get manager name (the manager who assigned the project)
             $mgrResult = $mysqli->query("SELECT name FROM Users WHERE user_id = " . $project['manager_id']);
             $mgr = $mgrResult->fetch_assoc();
             $project['managerName'] = $mgr ? $mgr['name'] : 'Unknown';
@@ -72,7 +72,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action == 'createProject') {
-        // Expected: projectName, description, priority, deadline, teamLeader, employees (array), tasks (array), manager_id
         $projectName = $mysqli->real_escape_string($data['projectName']);
         $description = $mysqli->real_escape_string($data['description']);
         $priority = $mysqli->real_escape_string($data['priority']);
@@ -87,13 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         $project_id = $mysqli->insert_id;
-        // Update team leader's role to 'Team Leader'
         $mysqli->query("UPDATE Users SET role = 'Team Leader' WHERE user_id = $teamLeader");
         
-        // Insert tasks for the project (each task must have an assignee)
         if (isset($data['tasks']) && is_array($data['tasks'])) {
             foreach ($data['tasks'] as $task) {
-                // Skip tasks with empty assignee (validation should prevent this on frontend)
                 if(empty($task['assignee'])) continue;
                 $task_name = $mysqli->real_escape_string($task['name']);
                 $assignee = intval($task['assignee']);
@@ -102,7 +98,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mysqli->query($taskQuery);
             }
         }
-        // Insert assigned employees
         if (isset($data['employees']) && is_array($data['employees'])) {
             foreach ($data['employees'] as $emp) {
                 $emp_id = intval($emp);
@@ -113,7 +108,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["success" => true, "project_id" => $project_id]);
         exit();
     } elseif ($action == 'updateProject') {
-        // Expected: project_id, plus fields to update: projectName, description, priority, deadline, teamLeader, employees, tasks
         if (!isset($data['project_id'])) {
             echo json_encode(["error" => "Project ID missing"]);
             exit();
@@ -151,7 +145,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["error" => "Project update failed", "details" => $mysqli->error]);
             exit();
         }
-        // For tasks: delete old tasks and reinsert new ones
         if (isset($data['tasks']) && is_array($data['tasks'])) {
             $mysqli->query("DELETE FROM project_tasks WHERE project_id=$project_id");
             foreach ($data['tasks'] as $task) {
@@ -163,7 +156,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mysqli->query($taskQuery);
             }
         }
-        // For employees: delete old assignments and reinsert
         if (isset($data['employees']) && is_array($data['employees'])) {
             $mysqli->query("DELETE FROM project_users WHERE project_id=$project_id");
             foreach ($data['employees'] as $emp) {
@@ -175,7 +167,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         echo json_encode(["success" => true]);
         exit();
     } elseif ($action == 'updateProjectField') {
-        // Generic update for project fields (e.g., completed, binned)
         if (!isset($data['project_id'])) {
             echo json_encode(["error" => "Project ID missing"]);
             exit();
@@ -202,29 +193,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["error" => "Update failed", "details" => $mysqli->error]);
         }
         exit();
+    } elseif ($action == 'updateProjectTask') {
+        if (!isset($data['task_id'])) {
+            echo json_encode(["error" => "Task ID missing"]);
+            exit();
+        }
+        $task_id = intval($data['task_id']);
+        $updates = [];
+        if (isset($data['status'])) {
+            $status = intval($data['status']);
+            $updates[] = "status=$status";
+        }
+        if (empty($updates)) {
+            echo json_encode(["error" => "No fields to update"]);
+            exit();
+        }
+        $updateStr = implode(", ", $updates);
+        $query = "UPDATE project_tasks SET $updateStr WHERE task_id=$task_id";
+        if ($mysqli->query($query)) {
+            $taskRes = $mysqli->query("SELECT project_id FROM project_tasks WHERE task_id = $task_id");
+            $row = $taskRes->fetch_assoc();
+            $project_id = $row['project_id'];
+            $totalRes = $mysqli->query("SELECT COUNT(*) as total FROM project_tasks WHERE project_id = $project_id");
+            $totalRow = $totalRes->fetch_assoc();
+            $totalTasks = $totalRow['total'];
+            $completedRes = $mysqli->query("SELECT COUNT(*) as completed FROM project_tasks WHERE project_id = $project_id AND status = 1");
+            $completedRow = $completedRes->fetch_assoc();
+            $completedTasks = $completedRow['completed'];
+            $progress = ($totalTasks > 0) ? ($completedTasks / $totalTasks * 100) : 0;
+            $progressQuery = "UPDATE Projects SET progress = $progress WHERE project_id = $project_id";
+            $mysqli->query($progressQuery);
+            echo json_encode(["success" => true]);
+        } else {
+            echo json_encode(["error" => "Task update failed", "details" => $mysqli->error]);
+        }
+        exit();
     } elseif ($action == 'deleteProject') {
-        // Delete a project completely; only allowed if the project is binned.
         if (!isset($data['project_id'])) {
             echo json_encode(["error" => "Project ID missing"]);
             exit();
         }
         $project_id = intval($data['project_id']);
-        // Check that the project is binned.
         $checkResult = $mysqli->query("SELECT team_leader_id, binned FROM Projects WHERE project_id=$project_id");
         $projectData = $checkResult->fetch_assoc();
         if (!$projectData || intval($projectData['binned']) !== 1) {
             echo json_encode(["error" => "Project must be binned before deletion"]);
             exit();
         }
-        // Delete associated tasks and assignments.
         $mysqli->query("DELETE FROM project_tasks WHERE project_id=$project_id");
         $mysqli->query("DELETE FROM project_users WHERE project_id=$project_id");
         if ($mysqli->query("DELETE FROM Projects WHERE project_id=$project_id")) {
-            // Check if the team leader (from this project) is still leading any active project.
             $tlId = intval($projectData['team_leader_id']);
             $activeTL = $mysqli->query("SELECT COUNT(*) as count FROM Projects WHERE team_leader_id = $tlId AND binned = 0")->fetch_assoc();
             if ($activeTL['count'] == 0) {
-                // If not, revert their role back to Employee.
                 $mysqli->query("UPDATE Users SET role = 'Employee' WHERE user_id = $tlId");
             }
             echo json_encode(["success" => true]);
@@ -237,3 +258,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $mysqli->close();
 ?>
+
+
