@@ -4,7 +4,6 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Login Component
 import LoginForm from './login pages/LoginForm';
-import RegisterForm from './login pages/RegisterForm';
 
 // Todo List Component (same for employees and managers)
 import TodoList from './TodoList pages/TodoList';
@@ -93,8 +92,7 @@ function App() {
               setUserId(id);
             }} />}
           />
-          <Route path="/register" element={<RegisterForm />} />  {/* Register Page Route */}
-          <Route path="*" element={<Navigate to="/" />} />
+          
         </Routes>
       )}
     </Router>
