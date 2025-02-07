@@ -1,4 +1,5 @@
 <?php
+header("Access-Control-Allow-Headers: *");
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -103,10 +104,28 @@ function getPosts($mysqli) {
 
 // Function for getTopics
 function getTopics($mysqli) {
+    $technical_filter = isset($_GET['technical_filter']) ? $_GET['technical_filter'] : null;
+    $from_date = isset($_GET['from_date']) ? $_GET['from_date'] : null;
+    $to_date = isset($_GET['to_date']) ? $_GET['to_date'] : null;
+    
     $sql = "SELECT t.topic_id, t.title, t.description, t.technical, t.created_by,
                    u.name AS creator_name, t.date_time
             FROM Forum_Topics t
-            JOIN Users u ON t.created_by = u.user_id";
+            JOIN Users u ON t.created_by = u.user_id
+            WHERE 1=1";
+
+    // Add technical filter
+    if ($technical_filter !== null && ($technical_filter === '0' || $technical_filter === '1')) {
+        $sql .= " AND t.technical = " . intval($technical_filter);
+    }
+
+    // Add date filters
+    if ($from_date) {
+        $sql .= " AND DATE(t.date_time) >= '" . $mysqli->real_escape_string($from_date) . "'";
+    }
+    if ($to_date) {
+        $sql .= " AND DATE(t.date_time) <= '" . $mysqli->real_escape_string($to_date) . "'";
+    }
 
     $result = $mysqli->query($sql);
     $topics = [];
@@ -115,7 +134,7 @@ function getTopics($mysqli) {
             $topics[] = $row;
         }
     }
-
+    
     echo json_encode($topics);
 }
 
