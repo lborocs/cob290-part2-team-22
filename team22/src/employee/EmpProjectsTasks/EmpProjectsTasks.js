@@ -1,261 +1,268 @@
-import React, { useState } from 'react';
-import { Container, Row, Col, Card, ProgressBar, ListGroup, Badge, Form, Button, ButtonGroup, Modal } from 'react-bootstrap';
-import { FiEye, FiEyeOff, FiPieChart } from 'react-icons/fi';
-import { Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js';
+"use client"
 
-// Register Chart.js components
-ChartJS.register(ArcElement, Tooltip, Legend);
+import { useState, useEffect, useCallback } from "react"
+import { Container, Button, Card, Badge, ButtonGroup, ProgressBar, ListGroup, Modal } from "react-bootstrap"
+import { Row, Col } from "antd"
+import { FiEye, FiEyeOff, FiClock, FiCheckCircle, FiAlertCircle, FiPieChart } from "react-icons/fi"
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js"
+import { Pie } from "react-chartjs-2"
 
-const employees = [
-  'Micheal Jones',
-  'Alice Smith',
-  'Emma Khan',
-  'Tom Clark',
-  'Raj Patel'
-];
+ChartJS.register(ArcElement, Tooltip, Legend)
+
+const API_URL = "http://35.214.101.36/EmpProjectsTasks.php"
+
+// Example current employee info - replace with actual user authentication
+const currentUser = { user_id: 2, role: "Employee", name: "Alice Smith" }
 
 const EmpProjectsTasks = () => {
-  // For demonstration purposes, we hardcode the current employee.
-  // In a real application, you would get this from your auth/user context.
-  const currentEmployee = 'Alice Smith';
-
+  const [selectedProject, setSelectedProject] = useState(null)
+  const [projects, setProjects] = useState([])
+  const [tasks, setTasks] = useState([])
   const [viewOptions, setViewOptions] = useState({
     active: true,
-    completed: true,
-  });
+    completed: false,
+  })
+  const [showProgressModal, setShowProgressModal] = useState(false)
 
-  const [projects, setProjects] = useState([
-    {
-      id: 1,
-      projectName: 'Project Alpha',
-      teamLeader: 'Micheal Jones',
-      employees: ['Alice Smith', 'Raj Patel'],
-      priority: 'High',
-      deadline: '2023-12-31',
-      description: 'This is a sample project.',
-      status: 'active',
-      progress: 50,
-      tasks: [
-        { id: 1, name: 'Task 1', assignee: 'Alice Smith', completed: false },
-        { id: 2, name: 'Task 2', assignee: 'Raj Patel', completed: true },
-      ],
-    },
-    // Add more projects as needed
-  ]);
-
-  const [showChartModal, setShowChartModal] = useState(false);
-  const [selectedProject, setSelectedProject] = useState(null);
-
-  // Toggle the visibility of active/completed projects
-  const toggleView = (option) => {
-    setViewOptions(prev => ({ ...prev, [option]: !prev[option] }));
-  };
-
-  const calculateTimeLeft = (deadline) => {
-    const diff = new Date(deadline) - new Date();
-    if (diff < 0) return 'Overdue';
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    return `${days} days left`;
-  };
-
-  // Group projects by their status (active or completed)
-  const groupProjectsByStatus = () => {
-    return projects.reduce((acc, project) => {
-      acc[project.status] = acc[project.status] || [];
-      acc[project.status].push(project);
-      return acc;
-    }, {});
-  };
-
-  const getStatusBadge = (status) => {
-    switch (status) {
-      case 'completed': return 'success';
-      default: return 'primary';
+  const fetchProjects = useCallback(async () => {
+    try {
+      const res = await fetch(`${API_URL}?action=getProjects&user_id=${currentUser.user_id}`)
+      const data = await res.json()
+      console.log("Fetched projects:", data)
+      setProjects(data)
+    } catch (err) {
+      console.error("Error fetching projects:", err)
     }
-  };
+  }, [])
 
-  // This handler toggles the task's completion status and updates the project's progress and status.
-  const handleTaskToggle = (projectId, taskId) => {
-    setProjects(prevProjects =>
-      prevProjects.map(project => {
-        if (project.id === projectId) {
-          // Toggle the task's completion state.
-          const updatedTasks = project.tasks.map(task => {
-            if (task.id === taskId) {
-              return { ...task, completed: !task.completed };
-            }
-            return task;
-          });
-          // Calculate new progress.
-          const completedCount = updatedTasks.filter(task => task.completed).length;
-          const newProgress = updatedTasks.length > 0 ? (completedCount / updatedTasks.length) * 100 : 0;
-          // If all tasks are completed, update the project status.
-          const newStatus = completedCount === updatedTasks.length ? 'completed' : 'active';
-          return { ...project, tasks: updatedTasks, progress: newProgress, status: newStatus };
-        }
-        return project;
+  const fetchTasks = async (projectId) => {
+    try {
+      const res = await fetch(`${API_URL}?action=getTasks&project_id=${projectId}&user_id=${currentUser.user_id}`)
+      const data = await res.json()
+      console.log("Fetched tasks for project", projectId, ":", data)
+      setTasks(data)
+    } catch (err) {
+      console.error("Error fetching tasks:", err)
+    }
+  }
+
+  const checkProjectAssociation = async (projectId) => {
+    try {
+      const res = await fetch(
+        `${API_URL}?action=checkProjectAssociation&project_id=${projectId}&user_id=${currentUser.user_id}`,
+      )
+      const data = await res.json()
+      console.log("Project association check:", data)
+      return data.isAssociated
+    } catch (err) {
+      console.error("Error checking project association:", err)
+      return false
+    }
+  }
+
+  useEffect(() => {
+    fetchProjects()
+  }, [fetchProjects])
+
+  const handleTaskToggle = async (taskId, currentStatus) => {
+    try {
+      const res = await fetch(`${API_URL}?action=updateTask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          task_id: taskId,
+          user_id: currentUser.user_id,
+          status: currentStatus === 1 ? 0 : 1,
+        }),
       })
-    );
-  };
+      const data = await res.json()
 
-  // Generate chart data for a project
-  const getChartData = (project) => {
-    const completedTasks = project.tasks.filter(task => task.completed).length;
-    const remainingTasks = project.tasks.length - completedTasks;
+      if (data.success) {
+        console.log("Task updated successfully:", data)
+        fetchTasks(selectedProject)
+        fetchProjects()
+      } else {
+        console.error("Error updating task:", data.error)
+      }
+    } catch (err) {
+      console.error("Error updating task:", err)
+    }
+  }
+
+  const toggleView = (option) => {
+    setViewOptions((prev) => ({ ...prev, [option]: !prev[option] }))
+  }
+
+  const getPriorityColor = (priority) => {
+    switch (priority.toLowerCase()) {
+      case "high":
+        return "danger"
+      case "medium":
+        return "warning"
+      case "low":
+        return "success"
+      default:
+        return "primary"
+    }
+  }
+
+  const getTimeStatus = (deadline) => {
+    const days = Math.ceil((new Date(deadline).getTime() - new Date().getTime()) / (1000 * 3600 * 24))
+    if (days < 0) return { text: "Overdue", color: "danger", icon: <FiAlertCircle /> }
+    if (days <= 7) return { text: `${days} days left`, color: "warning", icon: <FiClock /> }
+    return { text: `${days} days left`, color: "success", icon: <FiClock /> }
+  }
+
+  const getChartData = () => {
+    const labels = projects.map((project) => project.name)
+    const data = projects.map((project) => project.progress)
+    const backgroundColors = projects.map(
+      () =>
+        `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.6)`,
+    )
 
     return {
-      labels: ['Completed Tasks', 'Remaining Tasks'],
+      labels: labels,
       datasets: [
         {
-          data: [completedTasks, remainingTasks],
-          backgroundColor: ['#4CAF50', '#607D8B'],
-          borderColor: ['#fff', '#fff'],
+          data: data,
+          backgroundColor: backgroundColors,
+          borderColor: backgroundColors.map((color) => color.replace("0.6", "1")),
+          borderWidth: 1,
         },
       ],
-    };
-  };
+    }
+  }
 
   return (
-    <Container>
-      <h1 className="text-center my-4">My Projects and Tasks</h1>
-      
-      <div className="d-flex justify-content-end mb-4">
+    <Container className="py-4">
+      <h1 className="text-center mb-4">My Projects and Tasks</h1>
+
+      <div className="d-flex justify-content-between mb-4">
+        <Button variant="info" onClick={() => setShowProgressModal(true)}>
+          <FiPieChart className="me-2" />
+          View All Projects Progress
+        </Button>
         <ButtonGroup>
-          <Button 
-            variant={viewOptions.active ? 'primary' : 'secondary'} 
-            onClick={() => toggleView('active')}
-          >
-            {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active
+          <Button variant={viewOptions.active ? "primary" : "secondary"} onClick={() => toggleView("active")}>
+            {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active Projects
           </Button>
-          <Button 
-            variant={viewOptions.completed ? 'success' : 'secondary'} 
-            onClick={() => toggleView('completed')}
-          >
-            {viewOptions.completed ? <FiEye /> : <FiEyeOff />} Completed
+          <Button variant={viewOptions.completed ? "success" : "secondary"} onClick={() => toggleView("completed")}>
+            {viewOptions.completed ? <FiEye /> : <FiEyeOff />} Completed Projects
           </Button>
         </ButtonGroup>
       </div>
 
-      {Object.entries(groupProjectsByStatus()).map(([status, projects]) => (
-        viewOptions[status] && (
-          <div key={status} className="mb-5">
-            <h3 className="text-capitalize mb-3">
-              {status} Projects
-              <Badge bg={getStatusBadge(status)} className="ms-2">
-                {projects.length}
-              </Badge>
-            </h3>
-            <Row className="g-3">
-              {projects.map(project => (
-                <Col md={6} lg={4} key={project.id}>
-                  <Card className={`h-100 border-${getStatusBadge(project.status)}`}>
-                    <Card.Body>
-                      <Card.Title className="fs-5 m-0">{project.projectName}</Card.Title>
+      <Row gutter={[16, 16]}>
+        {projects
+          .filter((project) => {
+            if (project.completed === 1) {
+              return viewOptions.completed
+            } else {
+              return viewOptions.active
+            }
+          })
+          .map((project) => (
+            <Col xs={24} md={12} lg={8} key={project.project_id}>
+              <Card className="h-100">
+                <Card.Header className="d-flex justify-content-between align-items-center">
+                  <Badge bg={getPriorityColor(project.priority)}>{project.priority}</Badge>
+                  {getTimeStatus(project.deadline).icon}
+                </Card.Header>
+                <Card.Body>
+                  <Card.Title>{project.name}</Card.Title>
+                  <Card.Text className="text-muted small">{getTimeStatus(project.deadline).text}</Card.Text>
 
-                      <div className="d-flex justify-content-between align-items-center mb-3">
-                        <ProgressBar 
-                          now={project.progress} 
-                          label={`${Math.round(project.progress)}%`} 
-                          variant={getStatusBadge(project.status)}
-                          style={{ width: '70%' }}
-                        />
-                        <Button 
-                          variant="outline-secondary" 
-                          size="sm"
-                          onClick={() => {
-                            setSelectedProject(project);
-                            setShowChartModal(true);
-                          }}
+                  <ProgressBar
+                    now={project.progress}
+                    label={`${Math.round(project.progress)}%`}
+                    variant={project.progress === 100 ? "success" : "primary"}
+                    className="mb-3"
+                  />
+
+                  <Button
+                    variant="outline-primary"
+                    className="w-100"
+                    onClick={async () => {
+                      const isAssociated = await checkProjectAssociation(project.project_id)
+                      if (isAssociated) {
+                        setSelectedProject(project.project_id)
+                        fetchTasks(project.project_id)
+                      } else {
+                        console.log("User is not associated with this project")
+                        // You can add a notification here to inform the user
+                      }
+                    }}
+                  >
+                    View My Tasks
+                  </Button>
+
+                  {selectedProject === project.project_id && (
+                    <ListGroup className="mt-3">
+                      {tasks.map((task) => (
+                        <ListGroup.Item
+                          key={task.task_id}
+                          className="d-flex justify-content-between align-items-center"
                         >
-                          <FiPieChart />
-                        </Button>
-                      </div>
+                          <div className="form-check">
+                            <input
+                              type="checkbox"
+                              className="form-check-input"
+                              checked={task.status === 1}
+                              onChange={() => handleTaskToggle(task.task_id, task.status)}
+                              id={`task-${task.task_id}`}
+                            />
+                            <label className="form-check-label" htmlFor={`task-${task.task_id}`}>
+                              {task.task_name}
+                            </label>
+                          </div>
+                          {task.status === 1 && <FiCheckCircle className="text-success" />}
+                        </ListGroup.Item>
+                      ))}
+                    </ListGroup>
+                  )}
+                </Card.Body>
+              </Card>
+            </Col>
+          ))}
+      </Row>
 
-                      <div className="d-flex justify-content-between align-items-center mb-3">
-                        <Badge bg={
-                          project.priority === 'High'
-                            ? 'danger'
-                            : project.priority === 'Medium'
-                            ? 'warning'
-                            : 'success'
-                        }>
-                          {project.priority} Priority
-                        </Badge>
-                      </div>
-
-                      <div className="mb-3">
-                        <small className="text-muted d-block">
-                          Team Leader: {project.teamLeader}
-                        </small>
-                        <small className="text-muted d-block">
-                          Deadline: {new Date(project.deadline).toLocaleDateString()} ({calculateTimeLeft(project.deadline)})
-                        </small>
-                      </div>
-
-                      <Card.Text className="text-muted small mb-3">
-                        {project.description}
-                      </Card.Text>
-
-                      <h6 className="small">Assigned Team</h6>
-                      <div className="mb-3">
-                        {project.employees.map(employee => (
-                          <Badge key={employee} bg="secondary" className="me-1">
-                            {employee}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <h6 className="small">Tasks</h6>
-                      <ListGroup variant="flush">
-                        {project.tasks.map(task => (
-                          <ListGroup.Item key={task.id} className="px-0">
-                            <div className="d-flex justify-content-between align-items-center">
-                              <Form.Check 
-                                type="checkbox"
-                                checked={task.completed}
-                                label={task.name}
-                                // Only allow toggling if the task is assigned to the current employee.
-                                onChange={() => handleTaskToggle(project.id, task.id)}
-                                disabled={task.assignee !== currentEmployee}
-                              />
-                              {task.assignee && (
-                                <Badge bg="info">{task.assignee}</Badge>
-                              )}
-                            </div>
-                          </ListGroup.Item>
-                        ))}
-                      </ListGroup>
-                    </Card.Body>
-                  </Card>
-                </Col>
-              ))}
-            </Row>
-          </div>
-        )
-      ))}
-
-      {/* Progress Chart Modal */}
-      <Modal show={showChartModal} onHide={() => setShowChartModal(false)}>
+      <Modal show={showProgressModal} onHide={() => setShowProgressModal(false)} size="lg">
         <Modal.Header closeButton>
-          <Modal.Title>{selectedProject?.projectName} Progress</Modal.Title>
+          <Modal.Title>All Projects Progress</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          {selectedProject && (
-            <div style={{ height: '300px' }}>
-              <Pie 
-                data={getChartData(selectedProject)} 
-                options={{ 
-                  responsive: true,
-                  maintainAspectRatio: false,
-                }} 
-              />
-            </div>
-          )}
+          <div style={{ height: "400px" }}>
+            <Pie data={getChartData()} options={{ maintainAspectRatio: false }} />
+          </div>
+          <div className="mt-4">
+            <h5>Project Details:</h5>
+            <ListGroup>
+              {projects.map((project) => (
+                <ListGroup.Item key={project.project_id} className="d-flex justify-content-between align-items-center">
+                  <div>
+                    <strong>{project.name}</strong>
+                    <Badge bg={getPriorityColor(project.priority)} className="ms-2">
+                      {project.priority}
+                    </Badge>
+                  </div>
+                  <div>
+                    Progress: {Math.round(project.progress)}%
+                    <ProgressBar
+                      now={project.progress}
+                      variant={project.progress === 100 ? "success" : "primary"}
+                      style={{ width: "100px", height: "10px", display: "inline-block", marginLeft: "10px" }}
+                    />
+                  </div>
+                </ListGroup.Item>
+              ))}
+            </ListGroup>
+          </div>
         </Modal.Body>
       </Modal>
     </Container>
-  );
-};
+  )
+}
 
-export default EmpProjectsTasks;
+export default EmpProjectsTasks
+
