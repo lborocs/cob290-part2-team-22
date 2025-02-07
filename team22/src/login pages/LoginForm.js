@@ -76,10 +76,6 @@ const LoginForm = ({ onLoginSuccess }) => {
                     {message && <p className="mt-3 text-danger">{message}</p>}
                 </form>
                 
-                {/* Register Account Link */}
-                <p className="mt-3">
-                    Don't have an account? <Link to="/register">Register Account</Link>
-                </p>
             </div>
         </div>
     );

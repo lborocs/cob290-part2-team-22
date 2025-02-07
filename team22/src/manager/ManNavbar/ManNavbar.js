@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Modal, Button, Form } from 'react-bootstrap';
 
-const ManNavbar = () => {
+const ManNavbar = ({ setUserRole, setUserId }) => {
   const [showSettings, setShowSettings] = useState(false);
   const [activeModal, setActiveModal] = useState(null);
   const [step, setStep] = useState("currentPassword");
@@ -81,9 +81,13 @@ const ManNavbar = () => {
     }
   };
 
+
   const handleLogout = () => {
+    // Reset user state: no role or id, so will load loginscreen as empty user
     setShowSettings(false);
-    navigate('/LoginForm');
+    setUserRole(null);
+    setUserId(null);
+    navigate("/"); // Explicitly go to LoginForm page
   };
 
   return (

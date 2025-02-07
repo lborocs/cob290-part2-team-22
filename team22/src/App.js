@@ -13,7 +13,6 @@ import EmpNavbar from './employee/EmpNavbar/EmpNavbar';
 import EmpHome from './employee/EmpHome/EmpHome';
 import EmpProjectsTasks from './employee/EmpProjectsTasks/EmpProjectsTasks';
 import EmpForum from './employee/EmpForum/EmpForum';
-import EmpSettings from './employee/EmpSettings/EmpSettings';
 
 
 // Manager Components
@@ -23,7 +22,6 @@ import ManEmployees from './manager/ManEmployees/ManEmployees';
 import ManProjects from './manager/ManProjects/ManProjects';
 import ManTasks from './manager/ManTasks/ManTasks';
 import ManForum from './manager/ManForum/ManForum';
-import ManSettings from './manager/ManSettings/ManSettings';
 
 function App() {
   const [userRole, setUserRole] = useState(null); // Track logged-in user role
@@ -34,7 +32,11 @@ function App() {
       {userRole ? (
         <div className="d-flex">
           {/* Sidebar */}
-          {userRole === "Manager" ? <ManNavbar /> : <EmpNavbar />}
+          {userRole === "Manager" ? (
+            <ManNavbar setUserRole={setUserRole} setUserId={setUserId} />
+          ) : (
+            <EmpNavbar setUserRole={setUserRole} setUserId={setUserId} />
+          )}
 
           {/* Main Content */}
           <div
@@ -49,7 +51,7 @@ function App() {
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/settings" element={<EmpSettings userId={userId} />} />
+
                 </>
               )}
 
@@ -62,7 +64,7 @@ function App() {
                   <Route path="/employees" element={<ManEmployees />} />
                   <Route path="/forum/*" element={<ManForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/settings" element={<ManSettings userId={userId} />} />
+                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
@@ -73,27 +75,24 @@ function App() {
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/settings" element={<EmpSettings userId={userId} />} />
+                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
               {/* Redirect unknown routes */}
-              <Route path="*" element={<Navigate to="/" />} />
+              <Route path="*" element={<Navigate to={userRole ? "/" : "/login"} />} />
             </Routes>
           </div>
         </div>
       ) : (
-        // Show login form if not logged in
+        // When there is no user role, shows this (when program starts)
         <Routes>
-          <Route
-            path="/"
-            element={<LoginForm onLoginSuccess={(role, id) => {
-              setUserRole(role);
-              setUserId(id);
-            }} />}
+          <Route path="/" element={<LoginForm onLoginSuccess={(role, id) => {
+            setUserRole(role); setUserId(id);}} />}
           />
           
         </Routes>
+        
       )}
     </Router>
   );
