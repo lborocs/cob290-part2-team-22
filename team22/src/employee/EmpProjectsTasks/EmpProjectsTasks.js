@@ -1,9 +1,8 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
-import { Container, Button, Card, Badge, ButtonGroup, ProgressBar, ListGroup, Modal } from "react-bootstrap"
-import { Row, Col } from "antd"
-import { FiEye, FiEyeOff, FiClock, FiCheckCircle, FiAlertCircle, FiPieChart } from "react-icons/fi"
+import { Container, Button, Card, Badge, ButtonGroup, ProgressBar, ListGroup, Modal, Row, Col } from "react-bootstrap"
+import { FiEye, FiEyeOff, FiClock, FiCheckCircle, FiAlertCircle, FiPieChart, FiUser, FiUsers } from "react-icons/fi"
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js"
 import { Pie } from "react-chartjs-2"
 
@@ -15,14 +14,15 @@ const API_URL = "http://35.214.101.36/EmpProjectsTasks.php"
 const currentUser = { user_id: 2, role: "Employee", name: "Alice Smith" }
 
 const EmpProjectsTasks = () => {
-  const [selectedProject, setSelectedProject] = useState(null)
+  const [expandedProjects, setExpandedProjects] = useState({})
   const [projects, setProjects] = useState([])
-  const [tasks, setTasks] = useState([])
+  const [tasks, setTasks] = useState({})
   const [viewOptions, setViewOptions] = useState({
     active: true,
     completed: false,
   })
   const [showProgressModal, setShowProgressModal] = useState(false)
+  const [progressView, setProgressView] = useState({})
 
   const fetchProjects = useCallback(async () => {
     try {
@@ -30,41 +30,44 @@ const EmpProjectsTasks = () => {
       const data = await res.json()
       console.log("Fetched projects:", data)
       setProjects(data)
+      // Initialize progress view for each project
+      const initialProgressView = {}
+      data.forEach((project) => {
+        initialProgressView[project.project_id] = "user"
+      })
+      setProgressView(initialProgressView)
     } catch (err) {
       console.error("Error fetching projects:", err)
     }
   }, [])
 
-  const fetchTasks = async (projectId) => {
+  const fetchTasks = useCallback(async (projectId) => {
     try {
       const res = await fetch(`${API_URL}?action=getTasks&project_id=${projectId}&user_id=${currentUser.user_id}`)
       const data = await res.json()
       console.log("Fetched tasks for project", projectId, ":", data)
-      setTasks(data)
+      setTasks((prevTasks) => ({
+        ...prevTasks,
+        [projectId]: data,
+      }))
     } catch (err) {
       console.error("Error fetching tasks:", err)
     }
-  }
-
-  const checkProjectAssociation = async (projectId) => {
-    try {
-      const res = await fetch(
-        `${API_URL}?action=checkProjectAssociation&project_id=${projectId}&user_id=${currentUser.user_id}`,
-      )
-      const data = await res.json()
-      console.log("Project association check:", data)
-      return data.isAssociated
-    } catch (err) {
-      console.error("Error checking project association:", err)
-      return false
-    }
-  }
+  }, [])
 
   useEffect(() => {
     fetchProjects()
   }, [fetchProjects])
 
-  const handleTaskToggle = async (taskId, currentStatus) => {
+  useEffect(() => {
+    projects.forEach((project) => {
+      if (!tasks[project.project_id]) {
+        fetchTasks(project.project_id)
+      }
+    })
+  }, [projects, tasks, fetchTasks])
+
+  const handleTaskToggle = async (projectId, taskId, currentStatus) => {
     try {
       const res = await fetch(`${API_URL}?action=updateTask`, {
         method: "POST",
@@ -79,8 +82,21 @@ const EmpProjectsTasks = () => {
 
       if (data.success) {
         console.log("Task updated successfully:", data)
-        fetchTasks(selectedProject)
-        fetchProjects()
+        setTasks((prevTasks) => ({
+          ...prevTasks,
+          [projectId]: prevTasks[projectId].map((task) =>
+            task.task_id === taskId ? { ...task, status: currentStatus === 1 ? 0 : 1 } : task,
+          ),
+        }))
+
+        // Update the project progress immediately
+        setProjects((prevProjects) =>
+          prevProjects.map((project) =>
+            project.project_id === projectId
+              ? { ...project, team_progress: data.team_progress, user_progress: data.user_progress }
+              : project,
+          ),
+        )
       } else {
         console.error("Error updating task:", data.error)
       }
@@ -91,6 +107,13 @@ const EmpProjectsTasks = () => {
 
   const toggleView = (option) => {
     setViewOptions((prev) => ({ ...prev, [option]: !prev[option] }))
+  }
+
+  const toggleProgressView = (projectId) => {
+    setProgressView((prev) => ({
+      ...prev,
+      [projectId]: prev[projectId] === "user" ? "team" : "user",
+    }))
   }
 
   const getPriorityColor = (priority) => {
@@ -115,7 +138,7 @@ const EmpProjectsTasks = () => {
 
   const getChartData = () => {
     const labels = projects.map((project) => project.name)
-    const data = projects.map((project) => project.progress)
+    const data = projects.map((project) => project.team_progress)
     const backgroundColors = projects.map(
       () =>
         `rgba(${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, ${Math.floor(Math.random() * 255)}, 0.6)`,
@@ -135,7 +158,7 @@ const EmpProjectsTasks = () => {
   }
 
   return (
-    <Container className="py-4">
+    <Container fluid className="py-4 px-4">
       <h1 className="text-center mb-4">My Projects and Tasks</h1>
 
       <div className="d-flex justify-content-between mb-4">
@@ -153,7 +176,7 @@ const EmpProjectsTasks = () => {
         </ButtonGroup>
       </div>
 
-      <Row gutter={[16, 16]}>
+      <Row>
         {projects
           .filter((project) => {
             if (project.completed === 1) {
@@ -163,62 +186,76 @@ const EmpProjectsTasks = () => {
             }
           })
           .map((project) => (
-            <Col xs={24} md={12} lg={8} key={project.project_id}>
-              <Card className="h-100">
-                <Card.Header className="d-flex justify-content-between align-items-center">
+            <Col xs={12} md={6} lg={4} key={project.project_id} className="mb-4">
+              <Card className="h-100 shadow-sm">
+                <Card.Header className="d-flex justify-content-between align-items-center bg-light">
                   <Badge bg={getPriorityColor(project.priority)}>{project.priority}</Badge>
                   {getTimeStatus(project.deadline).icon}
                 </Card.Header>
-                <Card.Body>
-                  <Card.Title>{project.name}</Card.Title>
-                  <Card.Text className="text-muted small">{getTimeStatus(project.deadline).text}</Card.Text>
+                <Card.Body className="d-flex flex-column">
+                  <Card.Title className="mb-3">{project.name}</Card.Title>
+                  <Card.Text className="text-muted small mb-3">{getTimeStatus(project.deadline).text}</Card.Text>
 
-                  <ProgressBar
-                    now={project.progress}
-                    label={`${Math.round(project.progress)}%`}
-                    variant={project.progress === 100 ? "success" : "primary"}
-                    className="mb-3"
-                  />
+                  <div className="mb-3">
+                    <div className="d-flex justify-content-between align-items-center mb-2">
+                      <span>{progressView[project.project_id] === "user" ? "Your Progress" : "Team Progress"}</span>
+                      <Button
+                        variant="outline-secondary"
+                        size="sm"
+                        onClick={() => toggleProgressView(project.project_id)}
+                      >
+                        {progressView[project.project_id] === "user" ? <FiUsers /> : <FiUser />}
+                      </Button>
+                    </div>
+                    <ProgressBar
+                      now={progressView[project.project_id] === "user" ? project.user_progress : project.team_progress}
+                      label={`${Math.round(progressView[project.project_id] === "user" ? project.user_progress : project.team_progress)}%`}
+                      variant={project.progress === 100 ? "success" : "primary"}
+                    />
+                  </div>
 
                   <Button
                     variant="outline-primary"
-                    className="w-100"
-                    onClick={async () => {
-                      const isAssociated = await checkProjectAssociation(project.project_id)
-                      if (isAssociated) {
-                        setSelectedProject(project.project_id)
+                    className="mt-auto"
+                    onClick={() => {
+                      setExpandedProjects((prev) => ({
+                        ...prev,
+                        [project.project_id]: !prev[project.project_id],
+                      }))
+                      if (!tasks[project.project_id]) {
                         fetchTasks(project.project_id)
-                      } else {
-                        console.log("User is not associated with this project")
-                        // You can add a notification here to inform the user
                       }
                     }}
                   >
-                    View My Tasks
+                    {expandedProjects[project.project_id] ? "Hide Tasks" : "View My Tasks"}
                   </Button>
 
-                  {selectedProject === project.project_id && (
+                  {expandedProjects[project.project_id] && tasks[project.project_id] && (
                     <ListGroup className="mt-3">
-                      {tasks.map((task) => (
-                        <ListGroup.Item
-                          key={task.task_id}
-                          className="d-flex justify-content-between align-items-center"
-                        >
-                          <div className="form-check">
-                            <input
-                              type="checkbox"
-                              className="form-check-input"
-                              checked={task.status === 1}
-                              onChange={() => handleTaskToggle(task.task_id, task.status)}
-                              id={`task-${task.task_id}`}
-                            />
-                            <label className="form-check-label" htmlFor={`task-${task.task_id}`}>
-                              {task.task_name}
-                            </label>
-                          </div>
-                          {task.status === 1 && <FiCheckCircle className="text-success" />}
-                        </ListGroup.Item>
-                      ))}
+                      {tasks[project.project_id].length > 0 ? (
+                        tasks[project.project_id].map((task) => (
+                          <ListGroup.Item
+                            key={task.task_id}
+                            className="d-flex justify-content-between align-items-center"
+                          >
+                            <div className="form-check">
+                              <input
+                                type="checkbox"
+                                className="form-check-input"
+                                checked={task.status === 1}
+                                onChange={() => handleTaskToggle(project.project_id, task.task_id, task.status)}
+                                id={`task-${task.task_id}`}
+                              />
+                              <label className="form-check-label" htmlFor={`task-${task.task_id}`}>
+                                {task.task_name}
+                              </label>
+                            </div>
+                            {task.status === 1 && <FiCheckCircle className="text-success" />}
+                          </ListGroup.Item>
+                        ))
+                      ) : (
+                        <ListGroup.Item>No tasks assigned to you for this project.</ListGroup.Item>
+                      )}
                     </ListGroup>
                   )}
                 </Card.Body>
@@ -247,10 +284,18 @@ const EmpProjectsTasks = () => {
                     </Badge>
                   </div>
                   <div>
-                    Progress: {Math.round(project.progress)}%
+                    Your Progress: {Math.round(project.user_progress)}%
                     <ProgressBar
-                      now={project.progress}
-                      variant={project.progress === 100 ? "success" : "primary"}
+                      now={project.user_progress}
+                      variant={project.user_progress === 100 ? "success" : "primary"}
+                      style={{ width: "100px", height: "10px", display: "inline-block", marginLeft: "10px" }}
+                    />
+                  </div>
+                  <div>
+                    Team Progress: {Math.round(project.team_progress)}%
+                    <ProgressBar
+                      now={project.team_progress}
+                      variant={project.team_progress === 100 ? "success" : "primary"}
                       style={{ width: "100px", height: "10px", display: "inline-block", marginLeft: "10px" }}
                     />
                   </div>
