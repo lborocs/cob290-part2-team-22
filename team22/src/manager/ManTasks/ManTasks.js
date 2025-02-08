@@ -1,17 +1,43 @@
 "use client"
 
-import { useState, useEffect } from "react"
-import { Container, Button, Modal, Form, Card, Badge, ButtonGroup } from "react-bootstrap"
-import { Row, Col } from "react-bootstrap"
+import React, { useState, useEffect } from "react"
+import {
+  Container,
+  Button,
+  Modal,
+  Form,
+  Card,
+  Badge,
+  ButtonGroup,
+  Row,
+  Col,
+} from "react-bootstrap"
 import { Pie } from "react-chartjs-2"
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js"
-import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff, FiPlus } from "react-icons/fi"
+import {
+  FiPieChart,
+  FiEdit,
+  FiTrash2,
+  FiArchive,
+  FiEye,
+  FiEyeOff,
+  FiPlus,
+} from "react-icons/fi"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-// Set the API URL and current logged-in manager (adjust as needed)
+// API URL pointing to our backend PHP file
 const API_URL = "http://35.214.101.36/ManTasks.php"
+// Example current manager info
 const currentUser = { user_id: 3, role: "Manager", name: "John Manager" }
+
+const initialFormData = {
+  name: "",
+  priority: "Medium",
+  deadline: "",
+  assignedTo: "",
+  description: "",
+}
 
 const ManTasks = () => {
   const [showModal, setShowModal] = useState(false)
@@ -25,13 +51,7 @@ const ManTasks = () => {
     completed: true,
     binned: false,
   })
-  const [formData, setFormData] = useState({
-    name: "",
-    priority: "Medium",
-    deadline: "",
-    assignedTo: "",
-    description: "",
-  })
+  const [formData, setFormData] = useState(initialFormData)
 
   // Fetch users from the backend
   const fetchUsers = async () => {
@@ -60,10 +80,12 @@ const ManTasks = () => {
     fetchTasks()
   }, [])
 
-  // For managers, filter tasks so that they only see tasks they assigned
+  // For managers, show only tasks assigned by the current manager
   const filterTasksByManager = (allTasks) => {
     if (currentUser.role === "Manager") {
-      return allTasks.filter((task) => Number.parseInt(task.assigned_by) === currentUser.user_id)
+      return allTasks.filter(
+        (task) => Number.parseInt(task.assigned_by) === currentUser.user_id
+      )
     }
     return allTasks
   }
@@ -76,7 +98,8 @@ const ManTasks = () => {
         if (!viewOptions.binned) return acc
       } else {
         if (Number.parseInt(task.status) === 0 && !viewOptions.active) return acc
-        if (Number.parseInt(task.status) === 1 && !viewOptions.completed) return acc
+        if (Number.parseInt(task.status) === 1 && !viewOptions.completed)
+          return acc
       }
       acc[task.user_id] = acc[task.user_id] || []
       acc[task.user_id].push(task)
@@ -85,7 +108,9 @@ const ManTasks = () => {
   }
 
   const getUserName = (userId) => {
-    const user = users.find((u) => Number.parseInt(u.user_id) === Number.parseInt(userId))
+    const user = users.find(
+      (u) => Number.parseInt(u.user_id) === Number.parseInt(userId)
+    )
     return user ? user.name : "Unknown"
   }
 
@@ -119,7 +144,7 @@ const ManTasks = () => {
     }
     setShowModal(false)
     setEditingTask(null)
-    setFormData({ name: "", priority: "Medium", deadline: "", assignedTo: "", description: "" })
+    setFormData(initialFormData)
   }
 
   const toggleView = (option) => {
@@ -146,17 +171,41 @@ const ManTasks = () => {
     updateTaskField(task.individual_task_id, { status: newStatus })
   }
 
-  const handleBinChange = (task) => {
-    const newBinned = Number.parseInt(task.binned) === 1 ? 0 : 1
-    updateTaskField(task.individual_task_id, { binned: newBinned })
+  // If a task is binned, show options to restore or permanently delete.
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const res = await fetch(`${API_URL}?action=deleteTask`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ individual_task_id: taskId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchTasks()
+      } else {
+        alert("Delete failed: " + data.error)
+      }
+    } catch (err) {
+      console.error("Error deleting task", err)
+    }
   }
 
+  // Modified bin handler:
+  // If task is binned, do NOT immediately delete; instead, offer a restore option.
+  // We render separate buttons in the UI.
+  // getEmployeeChartData (for progress chart) remains unchanged.
   const getEmployeeChartData = (userId) => {
     const employeeTasks = tasks.filter(
-      (t) => Number.parseInt(t.user_id) === Number.parseInt(userId) && Number.parseInt(t.binned) === 0,
+      (t) =>
+        Number.parseInt(t.user_id) === Number.parseInt(userId) &&
+        Number.parseInt(t.binned) === 0
     )
-    const completed = employeeTasks.filter((t) => Number.parseInt(t.status) === 1).length
-    const remaining = employeeTasks.filter((t) => Number.parseInt(t.status) === 0).length
+    const completed = employeeTasks.filter(
+      (t) => Number.parseInt(t.status) === 1
+    ).length
+    const remaining = employeeTasks.filter(
+      (t) => Number.parseInt(t.status) === 0
+    ).length
     return {
       labels: ["Completed", "Remaining"],
       datasets: [
@@ -169,21 +218,34 @@ const ManTasks = () => {
     }
   }
 
+  // Re-fetch users and tasks on mount
   useEffect(() => {
     fetchUsers()
     fetchTasks()
-  }, [tasks]) // Added tasks to the dependency array
+  }, [])
 
   return (
     <Container fluid className="py-5 bg-light">
       <h1 className="text-center mb-5">Task Management Dashboard</h1>
 
       <div className="d-flex justify-content-between align-items-center mb-4">
-        <Button variant="primary" onClick={() => setShowModal(true)} className="rounded-pill">
+        <Button
+          variant="primary"
+          onClick={() => {
+            // Clear editing state and reset form when creating new task
+            setEditingTask(null)
+            setFormData(initialFormData)
+            setShowModal(true)
+          }}
+          className="rounded-pill"
+        >
           <FiPlus className="me-2" /> Create New Task
         </Button>
         <ButtonGroup>
-          <Button variant={viewOptions.active ? "primary" : "outline-primary"} onClick={() => toggleView("active")}>
+          <Button
+            variant={viewOptions.active ? "primary" : "outline-primary"}
+            onClick={() => toggleView("active")}
+          >
             {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active
           </Button>
           <Button
@@ -192,7 +254,10 @@ const ManTasks = () => {
           >
             {viewOptions.completed ? <FiEye /> : <FiEyeOff />} Completed
           </Button>
-          <Button variant={viewOptions.binned ? "danger" : "outline-danger"} onClick={() => toggleView("binned")}>
+          <Button
+            variant={viewOptions.binned ? "danger" : "outline-danger"}
+            onClick={() => toggleView("binned")}
+          >
             {viewOptions.binned ? <FiEye /> : <FiEyeOff />} Binned
           </Button>
         </ButtonGroup>
@@ -218,60 +283,76 @@ const ManTasks = () => {
                 <Card className="h-100 shadow-sm border-0">
                   <Card.Body>
                     <div className="d-flex justify-content-between align-items-center mb-3">
-                      <Form.Check
-                        type="checkbox"
-                        checked={Number.parseInt(task.status) === 1}
-                        onChange={() => handleStatusChange(task)}
-                        disabled={Number.parseInt(task.binned) === 1}
-                        label=""
-                      />
-                      <Badge
-                        bg={task.priority === "High" ? "danger" : task.priority === "Medium" ? "warning" : "success"}
-                        className="rounded-pill px-3"
-                      >
-                        {task.priority}
-                      </Badge>
+                      <div className="d-flex align-items-center">
+                        <Form.Check
+                          type="checkbox"
+                          id={`task-${task.individual_task_id}`}
+                          checked={Number.parseInt(task.status) === 1}
+                          onChange={() => handleStatusChange(task)}
+                          disabled={Number.parseInt(task.binned) === 1}
+                        />
+                        <span className="ms-2 fw-bold" style={{ fontSize: "1.3em" }}>
+                          {task.name}
+                        </span>
+                      </div>
+                      <div>
+                        {Number.parseInt(task.binned) === 1 ? (
+                          <>
+                            <Button
+                              variant="outline-success"
+                              size="sm"
+                              onClick={() =>
+                                updateTaskField(task.individual_task_id, { binned: 0 })
+                              }
+                            >
+                              Restore
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              className="ms-2"
+                              onClick={() => handleDeleteTask(task.individual_task_id)}
+                            >
+                              Delete
+                            </Button>
+                          </>
+                        ) : (
+                          <Button
+                            variant="outline-danger"
+                            size="sm"
+                            onClick={() =>
+                              updateTaskField(task.individual_task_id, { binned: 1 })
+                            }
+                          >
+                            <FiTrash2 />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                    <h5 className="card-title mb-3">{task.name}</h5>
-                    <p className="card-text text-muted mb-2">
-                      <small>Deadline: {new Date(task.deadline).toLocaleDateString()}</small>
-                    </p>
-                    <p className="card-text text-muted mb-3">
-                      <small>
-                        Status:{" "}
-                        {Number.parseInt(task.binned) === 1
-                          ? "Binned"
-                          : Number.parseInt(task.status) === 1
+                    <div>
+                      <p className="mb-2">
+                        <small className="text-muted">
+                          Deadline: {new Date(task.deadline).toLocaleDateString()}
+                        </small>
+                      </p>
+                      <p className="mb-2">
+                        <small className="text-muted">
+                          Status:{" "}
+                          {Number.parseInt(task.binned) === 1
+                            ? "Binned"
+                            : Number.parseInt(task.status) === 1
                             ? "Completed"
                             : "In Progress"}
-                      </small>
-                    </p>
-                    <p className="card-text mb-4">{task.description || "No description provided"}</p>
-                    <div className="d-flex justify-content-between align-items-center">
-                      <small className="text-muted">Assigned by: {getUserName(task.assigned_by)}</small>
-                      <div>
-                        <Button
-                          variant="outline-secondary"
-                          size="sm"
-                          className="me-2"
-                          onClick={() => {
-                            setEditingTask(task)
-                            setFormData({
-                              name: task.name,
-                              priority: task.priority,
-                              deadline: task.deadline,
-                              assignedTo: task.user_id,
-                              description: task.description || "",
-                            })
-                            setShowModal(true)
-                          }}
-                        >
-                          <FiEdit />
-                        </Button>
-                        <Button variant="outline-danger" size="sm" onClick={() => handleBinChange(task)}>
-                          {Number.parseInt(task.binned) === 1 ? <FiArchive /> : <FiTrash2 />}
-                        </Button>
-                      </div>
+                        </small>
+                      </p>
+                      <p className="mb-2" style={{ fontStyle: "italic", fontSize: "1.1em" }}>
+                        {task.description || "No description provided"}
+                      </p>
+                      <p className="mb-0">
+                        <small className="text-muted">
+                          Assigned by: {getUserName(task.assigned_by)}
+                        </small>
+                      </p>
                     </div>
                   </Card.Body>
                 </Card>
@@ -288,6 +369,8 @@ const ManTasks = () => {
           setShowModal(false)
           setEditingTask(null)
         }}
+        backdrop="static"
+        keyboard={false}
       >
         <Modal.Header closeButton>
           <Modal.Title>{editingTask ? "Edit Task" : "Create New Task"}</Modal.Title>
@@ -299,7 +382,9 @@ const ManTasks = () => {
               <Form.Control
                 required
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -307,11 +392,16 @@ const ManTasks = () => {
               <Form.Select
                 required
                 value={formData.assignedTo}
-                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, assignedTo: e.target.value })
+                }
               >
                 <option value="">Select Employee</option>
                 {users
-                  .filter((user) => user.role && user.role.toLowerCase() !== "manager")
+                  .filter(
+                    (user) =>
+                      user.role && user.role.toLowerCase() !== "manager"
+                  )
                   .map((user) => (
                     <option key={user.user_id} value={user.user_id}>
                       {user.name}
@@ -323,7 +413,9 @@ const ManTasks = () => {
               <Form.Label>Priority Level</Form.Label>
               <Form.Select
                 value={formData.priority}
-                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, priority: e.target.value })
+                }
               >
                 <option>Low</option>
                 <option>Medium</option>
@@ -336,7 +428,9 @@ const ManTasks = () => {
                 type="date"
                 required
                 value={formData.deadline}
-                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, deadline: e.target.value })
+                }
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -345,7 +439,9 @@ const ManTasks = () => {
                 as="textarea"
                 rows={3}
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, description: e.target.value })
+                }
               />
             </Form.Group>
           </Modal.Body>
@@ -357,7 +453,7 @@ const ManTasks = () => {
                 setEditingTask(null)
               }}
             >
-              Cancel
+              Close
             </Button>
             <Button variant="primary" type="submit">
               {editingTask ? "Save Changes" : "Create Task"}
@@ -366,10 +462,12 @@ const ManTasks = () => {
         </Form>
       </Modal>
 
-      {/* Progress Chart Modal */}
+      {/* Task Progress Chart Modal */}
       <Modal show={showChart} onHide={() => setShowChart(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>{selectedUser ? getUserName(selectedUser) : ""} Task Progress</Modal.Title>
+          <Modal.Title>
+            {selectedUser ? getUserName(selectedUser) : ""} Task Progress
+          </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div style={{ height: "300px" }}>
@@ -395,4 +493,3 @@ const ManTasks = () => {
 }
 
 export default ManTasks
-

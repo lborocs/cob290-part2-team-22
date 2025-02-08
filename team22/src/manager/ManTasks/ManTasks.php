@@ -23,7 +23,6 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action == 'getUsers') {
-        // Return all users (with role information)
         $result = $mysqli->query("SELECT user_id, name, role FROM Users");
         $users = [];
         while ($row = $result->fetch_assoc()){
@@ -32,7 +31,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode($users);
         exit();
     } elseif ($action == 'getTasks') {
-        // Get all tasks from individual_tasks table
         $result = $mysqli->query("SELECT * FROM individual_tasks");
         $tasks = [];
         while ($row = $result->fetch_assoc()){
@@ -51,14 +49,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action == 'createTask') {
-        // Expected fields: user_id, priority, deadline, description, name, assigned_by
+        // Expected fields: user_id, name, priority, deadline, description, assigned_by
         $user_id = intval($data['user_id']);
         $priority = $mysqli->real_escape_string($data['priority']);
         $deadline = $mysqli->real_escape_string($data['deadline']);
         $description = $mysqli->real_escape_string($data['description']);
         $name = $mysqli->real_escape_string($data['name']);
-        // Default status = 0 (in progress) and binned = 0
-        $status = 0;
+        $status = 0; // default in progress
         $binned = 0;
         $assigned_by = intval($data['assigned_by']);
         
@@ -116,6 +113,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["success" => true]);
         } else {
             echo json_encode(["error" => "Update failed", "details" => $mysqli->error]);
+        }
+        exit();
+    } elseif ($action == 'deleteTask') {
+        if (!isset($data['individual_task_id'])) {
+            echo json_encode(["error" => "Task ID missing"]);
+            exit();
+        }
+        $id = intval($data['individual_task_id']);
+        if ($mysqli->query("DELETE FROM individual_tasks WHERE individual_task_id = $id")) {
+            echo json_encode(["success" => true]);
+        } else {
+            echo json_encode(["error" => "Task deletion failed", "details" => $mysqli->error]);
         }
         exit();
     }
