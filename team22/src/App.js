@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
 // Login Component
@@ -14,7 +14,6 @@ import EmpHome from './employee/EmpHome/EmpHome';
 import EmpProjectsTasks from './employee/EmpProjectsTasks/EmpProjectsTasks';
 import EmpForum from './employee/EmpForum/EmpForum';
 
-
 // Manager Components
 import ManNavbar from './manager/ManNavbar/ManNavbar';
 import ManHome from './manager/ManHome/ManHome';
@@ -24,8 +23,19 @@ import ManTasks from './manager/ManTasks/ManTasks';
 import ManForum from './manager/ManForum/ManForum';
 
 function App() {
-  const [userRole, setUserRole] = useState(null); // Track logged-in user role
-  const [userId, setUserId] = useState(null); // Track logged-in user ID
+  const [userRole, setUserRole] = useState(localStorage.getItem('userRole') || null);
+  const [userId, setUserId] = useState(localStorage.getItem('userId') || null);
+
+  // Save userRole and userId to localStorage on change
+  useEffect(() => {
+    if (userRole && userId) {
+      localStorage.setItem('userRole', userRole);
+      localStorage.setItem('userId', userId);
+    } else {
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userId');
+    }
+  }, [userRole, userId]);
 
   return (
     <Router>
@@ -51,7 +61,6 @@ function App() {
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
@@ -64,35 +73,39 @@ function App() {
                   <Route path="/employees" element={<ManEmployees />} />
                   <Route path="/forum/*" element={<ManForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
-               {/* Team Leader Routes */}
-               {userRole === "Team Leader" && (
+              {/* Team Leader Routes */}
+              {userRole === "Team Leader" && (
                 <>
                   <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
               {/* Redirect unknown routes */}
-              <Route path="*" element={<Navigate to={userRole ? "/" : "/login"} replace />} />
+              <Route path="*" element={<Navigate to={window.location.pathname} replace />} />
             </Routes>
           </div>
         </div>
       ) : (
-        // When there is no user role, shows this (when program starts)
+        // When there is no user role, show login page
         <Routes>
-          <Route path="/" element={<LoginForm onLoginSuccess={(role, id) => {
-            setUserRole(role); setUserId(id);}} />}
+          <Route
+            path="/"
+            element={
+              <LoginForm
+                onLoginSuccess={(role, id) => {
+                  setUserRole(role);
+                  setUserId(id);
+                }}
+              />
+            }
           />
-          
         </Routes>
-        
       )}
     </Router>
   );

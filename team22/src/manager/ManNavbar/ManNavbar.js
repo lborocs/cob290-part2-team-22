@@ -111,14 +111,17 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
       <div>
         <h3 className="text-center py-3">Manager Sidebar</h3>
         <ul className="nav flex-column px-3">
-          <li className="nav-item"><Link to="/" className="nav-link text-white">Home</Link></li>
-          <li className="nav-item"><Link to="/projects" className="nav-link text-white">Projects</Link></li>
-          <li className="nav-item"><Link to="/tasks" className="nav-link text-white">Tasks</Link></li>
-          <li className="nav-item"><Link to="/employees" className="nav-link text-white">Employees</Link></li>
+          <li className="nav-item"><Link to="/" className="nav-link text-white hover-effect">Home</Link></li>
+          <li className="nav-item"><Link to="/projects" className="nav-link text-white hover-effect">Projects</Link></li>
+          <li className="nav-item"><Link to="/tasks" className="nav-link text-white hover-effect">Tasks</Link></li>
+          <li className="nav-item"><Link to="/employees" className="nav-link text-white hover-effect">Employees</Link></li>
+          <li className="nav-item"><Link to="/todolist" className="nav-link text-white hover-effect">TodoList</Link></li>
+          <li className="nav-item"><Link to="/forum" className="nav-link text-white hover-effect">Forum</Link></li>
+
         </ul>
       </div>
       <div className="px-3 pb-3">
-        <Button variant="link" className="nav-link text-white" onClick={() => setActiveModal("settings")}>
+        <Button variant="link" className="nav-link text-white hover-effect" onClick={() => setActiveModal("settings")}>
           Settings
         </Button>
       </div>
@@ -189,6 +192,18 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <style>
+        {`
+          .hover-effect:hover {
+            background-color: #343a40; /* Darker background on hover */
+            color: #fff !important; /* Ensure text color stays white */
+            text-decoration: none; /* Remove underline on hover */
+          }
+        `}
+      </style>
+
+
     </div>
   );
 };

@@ -109,16 +109,16 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
   return (
     <div className="bg-dark text-white vh-100" style={{ width: '250px', position: 'fixed', top: '0', left: '0', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <div>
-        <h3 className="text-center py-3">Manager Sidebar</h3>
+        <h3 className="text-center py-3">Employee Sidebar</h3>
         <ul className="nav flex-column px-3">
-          <li className="nav-item"><Link to="/" className="nav-link text-white">Home</Link></li>
-          <li className="nav-item"><Link to="/projects-tasks" className="nav-link text-white">Projects/Tasks</Link></li>
-          <li className="nav-item"><Link to="/forum" className="nav-link text-white">Forum</Link></li>
-          <li className="nav-item"><Link to="/todolist" className="nav-link text-white">TodoList</Link></li>
+          <li className="nav-item"><Link to="/" className="nav-link text-white hover-effect">Home</Link></li>
+          <li className="nav-item"><Link to="/projects-tasks" className="nav-link text-white hover-effect">Projects/Tasks</Link></li>
+          <li className="nav-item"><Link to="/todolist" className="nav-link text-white hover-effect">TodoList</Link></li>
+          <li className="nav-item"><Link to="/forum" className="nav-link text-white hover-effect">Forum</Link></li>
         </ul>
       </div>
       <div className="px-3 pb-3">
-        <Button variant="link" className="nav-link text-white" onClick={() => setActiveModal("settings")}>
+        <Button variant="link" className="nav-link text-white hover-effect" onClick={() => setActiveModal("settings")}>
           Settings
         </Button>
       </div>
@@ -189,6 +189,17 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
           </Button>
         </Modal.Footer>
       </Modal>
+
+      <style>
+        {`
+          .hover-effect:hover {
+            background-color: #343a40; /* Darker background on hover */
+            color: #fff !important; /* Ensure text color stays white */
+            text-decoration: none; /* Remove underline on hover */
+          }
+        `}
+      </style>
+
     </div>
   );
 };
