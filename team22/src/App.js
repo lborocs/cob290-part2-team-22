@@ -33,9 +33,9 @@ function App() {
         <div className="d-flex">
           {/* Sidebar */}
           {userRole === "Manager" ? (
-            <ManNavbar setUserRole={setUserRole} setUserId={setUserId} />
+            <ManNavbar setUserRole={setUserRole} setUserId={setUserId} userId={userId} />
           ) : (
-            <EmpNavbar setUserRole={setUserRole} setUserId={setUserId} />
+            <EmpNavbar setUserRole={setUserRole} setUserId={setUserId} userId={userId} />
           )}
 
           {/* Main Content */}
@@ -51,7 +51,7 @@ function App() {
                   <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
-
+                  <Route path="/login" element={<LoginForm />} />
                 </>
               )}
 
@@ -80,7 +80,7 @@ function App() {
               )}
 
               {/* Redirect unknown routes */}
-              <Route path="*" element={<Navigate to={userRole ? "/" : "/login"} />} />
+              <Route path="*" element={<Navigate to={userRole ? "/" : "/login"} replace />} />
             </Routes>
           </div>
         </div>
