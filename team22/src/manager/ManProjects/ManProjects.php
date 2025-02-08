@@ -42,11 +42,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
                 $tasks[] = $t;
             }
             $project['tasks'] = $tasks;
-            // Get assigned employees (names) for this project from project_users joined with Users
-            $puResult = $mysqli->query("SELECT pu.user_id, u.name FROM project_users pu JOIN Users u ON pu.user_id = u.user_id WHERE pu.project_id = $project_id");
+            // Get assigned employees as user IDs
+            $puResult = $mysqli->query("SELECT pu.user_id FROM project_users pu WHERE pu.project_id = $project_id");
             $employees = [];
             while ($emp = $puResult->fetch_assoc()){
-                $employees[] = $emp['name'];
+                $employees[] = $emp['user_id'];
             }
             $project['employees'] = $employees;
             // Get team leader name
@@ -145,6 +145,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["error" => "Project update failed", "details" => $mysqli->error]);
             exit();
         }
+        // For tasks: delete old tasks and reinsert new ones
         if (isset($data['tasks']) && is_array($data['tasks'])) {
             $mysqli->query("DELETE FROM project_tasks WHERE project_id=$project_id");
             foreach ($data['tasks'] as $task) {
@@ -156,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $mysqli->query($taskQuery);
             }
         }
+        // For employees: delete old assignments and reinsert
         if (isset($data['employees']) && is_array($data['employees'])) {
             $mysqli->query("DELETE FROM project_users WHERE project_id=$project_id");
             foreach ($data['employees'] as $emp) {
@@ -258,5 +260,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $mysqli->close();
 ?>
-
-

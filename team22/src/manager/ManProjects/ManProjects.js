@@ -222,7 +222,7 @@ const ManProjects = () => {
   }
 
   const getUserName = (userId) => {
-    const user = users.find(u => parseInt(u.user_id) === parseInt(userId))
+    const user = users.find(u => u.user_id == userId)  // Using == to allow string/number comparison
     return user ? user.name : 'Unknown'
   }
 
@@ -448,14 +448,15 @@ const ManProjects = () => {
                         </Card.Text>
 
                         <h6 className="small">Assigned Team</h6>
-                        <div className="mb-3">
-                          {project.employees &&
-                            project.employees.map((emp, idx) => (
-                              <Badge key={idx} bg="secondary" className="me-1 mb-1">
-                                {emp}
-                              </Badge>
-                            ))}
-                        </div>
+                          <div className="mb-3">
+                            {project.employees &&
+                              project.employees.map((emp, idx) => (
+                                <Badge key={idx} bg="secondary" className="me-1 mb-1">
+                                  {getUserName(emp)}
+                                </Badge>
+                              ))
+                            }
+                          </div>
 
                         <h6 className="small">Tasks</h6>
                         <ListGroup variant="flush">
