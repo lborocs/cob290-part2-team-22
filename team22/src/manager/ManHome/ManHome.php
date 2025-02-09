@@ -15,85 +15,126 @@ if ($mysqli->connect_error) {
     exit();
 }
 
-// Determine which process to execute
 $process = $_GET['process'] ?? '';
+$project_id = $_GET['project_id'] ?? '';
 
-// Function for getTasks (simplified)
-function getTasks($mysqli) {
+function getTaskStats($mysqli) {
     $queries = [
         "total_tasks" => "SELECT COUNT(*) AS total_tasks FROM project_tasks",
         "completed_tasks" => "SELECT COUNT(*) AS completed_tasks FROM project_tasks WHERE status = 1",
         "uncompleted_tasks" => "SELECT COUNT(*) AS uncompleted_tasks FROM project_tasks WHERE status = 0"
     ];
 
-    $tasks = [];
+    $taskStats = [];
     foreach ($queries as $key => $query) {
         $result = $mysqli->query($query);
         if ($result) {
-            $tasks[$key] = $result->fetch_assoc()[$key];
+            $taskStats[$key] = $result->fetch_assoc()[$key];
         } else {
             echo json_encode(["error" => "Unable to fetch $key"]);
             return;
         }
     }
 
-    echo json_encode(["tasks" => $tasks]);
+    echo json_encode(["taskStats" => $taskStats]);
 }
 
-// Function for getProjects (simplified)
+function getTaskStatsByProject($mysqli, $project_id) {
+    error_log($project_id);
+    $queries = [
+        "total_tasks" => "SELECT COUNT(*) AS total_tasks FROM project_tasks WHERE project_id =" . $project_id,
+        "completed_tasks" => "SELECT COUNT(*) AS completed_tasks FROM project_tasks WHERE status = 1 and project_id =" . $project_id,
+        "uncompleted_tasks" => "SELECT COUNT(*) AS uncompleted_tasks FROM project_tasks WHERE status = 0 and project_id =" . $project_id
+    ];
+
+    $taskStats = [];
+    foreach ($queries as $key => $query) {
+        $result = $mysqli->query($query);
+        if ($result) {
+            $taskStats[$key] = $result->fetch_assoc()[$key];
+        } else {
+            echo json_encode(["error" => "Unable to fetch $key"]);
+            return;
+        }
+    }
+
+    echo json_encode(["taskStats" => $taskStats]);
+}
+
 function getProjects($mysqli) {
+    $query = "SELECT project_id, name FROM Projects";
+    $result = $mysqli->query($query);
+    $projects = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $projects[] = $row;
+        }
+        echo json_encode($projects);
+    } else {
+        echo json_encode(["error" => "Unable to fetch $key"]);
+        return;
+    }
+}
+
+
+function getProjectStats($mysqli) {
     $queries = [
         "active_projects" => "SELECT COUNT(*) AS active_projects FROM Projects WHERE completed = 0 AND binned = 0",
         "overdue_projects" => "SELECT COUNT(*) AS overdue_projects FROM Projects WHERE deadline < CURDATE() AND completed = 0 AND binned = 0",
         "average_progress" => "SELECT ROUND(AVG(progress),0) AS average_progress FROM Projects WHERE completed = 0 AND binned = 0"
     ];
 
-    $projects = [];
+    $projectStats = [];
     foreach ($queries as $key => $query) {
         $result = $mysqli->query($query);
         if ($result) {
-            $projects[$key] = $result->fetch_assoc()[$key];
+            $projectStats[$key] = $result->fetch_assoc()[$key];
         } else {
             echo json_encode(["error" => "Unable to fetch $key"]);
             return;
         }
     }
 
-    echo json_encode(["projects" => $projects]);
+    echo json_encode(["projectStats" => $projectStats]);
 }
 
-// Function for getKPIs (simplified)
-function getKPIs($mysqli) {
+function getUserStats($mysqli) {
     $queries = [
-        "total_employees" => "SELECT COUNT(*) AS total_employees FROM Users",
+        "total_users" => "SELECT COUNT(*) AS total_users FROM Users",
         "total_managers" => "SELECT COUNT(*) AS total_managers FROM Users WHERE role = 'Manager'",
-        "total_team_leaders" => "SELECT COUNT(*) AS total_team_leaders FROM Users WHERE role = 'Team Leader'"
+        "total_team_leaders" => "SELECT COUNT(*) AS total_team_leaders FROM Users WHERE role = 'Team Leader'",
+        "total_employees" => "SELECT COUNT(*) AS total_employees FROM Users WHERE role = 'Employee'"
     ];
 
-    $kpis = [];
+    $userStats = [];
     foreach ($queries as $key => $query) {
         $result = $mysqli->query($query);
         if ($result) {
-            $kpis[$key] = $result->fetch_assoc()[$key];
+            $userStats[$key] = $result->fetch_assoc()[$key];
         } else {
             echo json_encode(["error" => "Unable to fetch $key"]);
             return;
         }
     }
 
-    echo json_encode(["kpis" => $kpis]);
+    echo json_encode(["userStats" => $userStats]);
 }
 
-// Route to the appropriate function
 switch ($process) {
-    case 'getTasks':
-        getTasks($mysqli);
+    case 'getTaskStats':
+        getTaskStats($mysqli);
+        break;
+    case 'getProjectStats':
+        getprojectStats($mysqli);
+        break;
+    case 'getUserStats':
+        getUserStats($mysqli);
         break;
     case 'getProjects':
         getProjects($mysqli);
         break;
-    case 'getKPIs':
-        getKPIs($mysqli);
+    case 'getTaskStatsByProject':
+        getTaskStatsByProject($mysqli, $project_id);
         break;
     default:
         echo json_encode(["error" => "Invalid process"]);
