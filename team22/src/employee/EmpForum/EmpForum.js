@@ -20,6 +20,10 @@ function EmpForum({ userId }) {
 
 
 function TopicsList({ userId }) {
+  const [users, setUsers] = React.useState([]);
+  const [userFilter, setUserFilter] = React.useState(null);
+  const [tempUserFilter, setTempUserFilter] = React.useState(null);
+
   const [fromDate, setFromDate] = React.useState(null);
   const [toDate, setToDate] = React.useState(null);
   const [tempFromDate, setTempFromDate] = React.useState('');
@@ -42,8 +46,13 @@ function TopicsList({ userId }) {
   const [topicToDelete, setTopicToDelete] = React.useState(null);
 
   React.useEffect(() => {
+    fetch('http://35.214.101.36/Forum.php?process=getUsers') //localhost/cob290-part2-team-22/team22/src/employee/EmpForum
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error('Error fetching users:', err));
+    
     fetchTopics();
-  }, [technicalFilter, fromDate, toDate]);
+  }, [technicalFilter, fromDate, toDate, userFilter]);
 
   const fetchTopics = () => {
     let url = 'http://35.214.101.36/Forum.php?process=getTopics';
@@ -52,6 +61,7 @@ function TopicsList({ userId }) {
     if (technicalFilter !== null) params.push(`technical_filter=${technicalFilter}`);
     if (fromDate) params.push(`from_date=${fromDate}`);
     if (toDate) params.push(`to_date=${toDate}`);
+    if (userFilter) params.push(`user_filter=${userFilter}`);
     
     if (params.length > 0) {
       url += '&' + params.join('&');
@@ -133,7 +143,7 @@ function TopicsList({ userId }) {
         <ul className="list-group">
           {topics.map(topic => {
             const isTechnical = Number(topic.technical) === 1;
-            const isOwner = Number(topic.created_by) === userId;
+            const isOwner = Number(topic.created_by) === Number(userId);
             return (
               <li key={topic.topic_id} className="list-group-item d-flex justify-content-between align-items-start">
                 <div className="flex-grow-1">
@@ -250,7 +260,7 @@ function TopicsList({ userId }) {
                 <h5 className="modal-title">Filter Topics</h5>
                 <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
               </div>
-              <div className="modal-body">
+              <div className="modal-body px-4">
                 <div className="form-check">
                   <input
                     className="form-check-input"
@@ -292,10 +302,10 @@ function TopicsList({ userId }) {
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-4 px-3">
                 <h6>Date Range</h6>
                 <div className="row g-3">
-                  <div className="col-md-6">
+                  <div className="col-md-6 px-3">
                     <label htmlFor="fromDate" className="form-label">From Date</label>
                     <input 
                       type="date" 
@@ -305,7 +315,7 @@ function TopicsList({ userId }) {
                       onChange={(e) => setTempFromDate(e.target.value)}
                     />
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-md-6 px-3">
                     <label htmlFor="toDate" className="form-label">To Date</label>
                     <input 
                       type="date" 
@@ -316,6 +326,21 @@ function TopicsList({ userId }) {
                     />
                   </div>
                 </div>
+
+                <label htmlFor="userFilter" className="form-label mt-3">Filter by Author</label>
+                <select 
+                  className="form-select"
+                  id="userFilter"
+                  value={tempUserFilter || ''}
+                  onChange={(e) => setTempUserFilter(e.target.value || null)}
+                >
+                  <option value="">Any User</option>
+                  {users.map(user => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.name} ({user.job_title})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div className="modal-footer">
@@ -325,6 +350,7 @@ function TopicsList({ userId }) {
                   setTechnicalFilter(tempTechnicalFilter);
                   setFromDate(tempFromDate || null);
                   setToDate(tempToDate || null);
+                  setUserFilter(tempUserFilter);
                   setShowFilterModal(false); 
                 }}
               >
@@ -364,6 +390,7 @@ function TopicsList({ userId }) {
 function TopicView({ userId }) {
   const { id } = useParams();
   const [posts, setPosts] = React.useState([]);
+  const [topic, setTopic] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [newPostContent, setNewPostContent] = React.useState('');
 
@@ -377,9 +404,18 @@ function TopicView({ userId }) {
   const [editPostContent, setEditPostContent] = React.useState('');
 
   React.useEffect(() => {
+    fetchTopic(id);
     fetchPosts(id);
   }, [id]);
   
+  const fetchTopic = (topicId) => {
+    fetch(`http://35.214.101.36/Forum.php?process=getTopics&topic_id=${topicId}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.length > 0) setTopic(data[0]);
+      })
+      .catch(err => console.error('Error fetching topic:', err));
+  };
 
   const fetchPosts = (id) => {
     fetch(`http://35.214.101.36/Forum.php?process=getPosts&topic_id=${id}`)
@@ -466,7 +502,14 @@ function TopicView({ userId }) {
 
   return (
     <div className="mt-4">
-      <h2 className="mb-4">Topic Posts</h2>
+      {topic ? (
+        <div className="mb-4">
+          <h2>{topic.title} By {topic.creator_name}</h2>
+          <p className="text-muted">{topic.description}</p>
+        </div>
+      ) : (
+        <h2 className="mb-4">Loading Topic...</h2>
+      )}
       <div className="d-flex justify-content-between align-items-center mb-3">
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <i className="bi bi-plus-circle"></i> Create Post
@@ -480,7 +523,7 @@ function TopicView({ userId }) {
       ) : (
         <ul className="list-group">
           {posts.map(post => {
-            const isOwner = Number(post.user_id) === userId;
+            const isOwner = Number(post.user_id) === Number(userId);
             return (
               <li key={post.post_id} className="list-group-item d-flex justify-content-between align-items-center">
                 <div className="me-3">
