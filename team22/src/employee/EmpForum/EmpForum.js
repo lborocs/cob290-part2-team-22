@@ -20,6 +20,15 @@ function EmpForum({ userId }) {
 
 
 function TopicsList({ userId }) {
+  const [fromDate, setFromDate] = React.useState(null);
+  const [toDate, setToDate] = React.useState(null);
+  const [tempFromDate, setTempFromDate] = React.useState('');
+  const [tempToDate, setTempToDate] = React.useState('');
+
+  const [showFilterModal, setShowFilterModal] = React.useState(false);
+  const [technicalFilter, setTechnicalFilter] = React.useState(null); // null = all, 1 = technical, 0 = non-technical
+  const [tempTechnicalFilter, setTempTechnicalFilter] = React.useState(null);
+
   const [topics, setTopics] = React.useState([]);
   const [showModal, setShowModal] = React.useState(false);
   const [newTopic, setNewTopic] = React.useState({
@@ -34,10 +43,21 @@ function TopicsList({ userId }) {
 
   React.useEffect(() => {
     fetchTopics();
-  }, []);
+  }, [technicalFilter, fromDate, toDate]);
 
   const fetchTopics = () => {
-    fetch('http://35.214.101.36/Forum.php?process=getTopics') // replace big file path with 35.214.101.36
+    let url = 'http://35.214.101.36/Forum.php?process=getTopics';
+    
+    const params = [];
+    if (technicalFilter !== null) params.push(`technical_filter=${technicalFilter}`);
+    if (fromDate) params.push(`from_date=${fromDate}`);
+    if (toDate) params.push(`to_date=${toDate}`);
+    
+    if (params.length > 0) {
+      url += '&' + params.join('&');
+    }
+  
+    fetch(url)
       .then(res => res.json())
       .then(data => setTopics(data))
       .catch(err => console.error('Error fetching topics:', err));
@@ -96,6 +116,15 @@ function TopicsList({ userId }) {
       <div className="d-flex justify-content-between align-items-center mb-3">
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <i className="bi bi-folder-plus"></i> Create Topic
+        </button>
+        <button 
+          className="btn btn-secondary" 
+          onClick={() => { 
+            setTempTechnicalFilter(technicalFilter); 
+            setShowFilterModal(true); 
+          }}
+        >
+          <i className="bi bi-funnel"></i> Filter
         </button>
       </div>
       {topics.length === 0 ? (
@@ -212,6 +241,102 @@ function TopicsList({ userId }) {
         </div>
       )}
 
+      {/* Filter Topics Modal */}
+      {showFilterModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Filter Topics</h5>
+                <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="technicalFilter"
+                    id="filterAll"
+                    checked={tempTechnicalFilter === null}
+                    onChange={() => setTempTechnicalFilter(null)}
+                  />
+                  <label className="form-check-label" htmlFor="filterAll">
+                    All Topics
+                  </label>
+                </div>
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="technicalFilter"
+                    id="filterTechnical"
+                    checked={tempTechnicalFilter === 1}
+                    onChange={() => setTempTechnicalFilter(1)}
+                  />
+                  <label className="form-check-label" htmlFor="filterTechnical">
+                    Technical Topics
+                  </label>
+                </div>
+                <div className="form-check">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="technicalFilter"
+                    id="filterNonTechnical"
+                    checked={tempTechnicalFilter === 0}
+                    onChange={() => setTempTechnicalFilter(0)}
+                  />
+                  <label className="form-check-label" htmlFor="filterNonTechnical">
+                    Non-Technical Topics
+                  </label>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h6>Date Range</h6>
+                <div className="row g-3">
+                  <div className="col-md-6">
+                    <label htmlFor="fromDate" className="form-label">From Date</label>
+                    <input 
+                      type="date" 
+                      className="form-control" 
+                      id="fromDate"
+                      value={tempFromDate}
+                      onChange={(e) => setTempFromDate(e.target.value)}
+                    />
+                  </div>
+                  <div className="col-md-6">
+                    <label htmlFor="toDate" className="form-label">To Date</label>
+                    <input 
+                      type="date" 
+                      className="form-control" 
+                      id="toDate"
+                      value={tempToDate}
+                      onChange={(e) => setTempToDate(e.target.value)}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-footer">
+              <button 
+                className="btn btn-primary" 
+                onClick={() => { 
+                  setTechnicalFilter(tempTechnicalFilter);
+                  setFromDate(tempFromDate || null);
+                  setToDate(tempToDate || null);
+                  setShowFilterModal(false); 
+                }}
+              >
+                  Apply Filter
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Delete Topic Confirmation Modal */}
       {showDeleteModal && topicToDelete && (
         <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
@@ -252,7 +377,7 @@ function TopicView({ userId }) {
   const [editPostContent, setEditPostContent] = React.useState('');
 
   React.useEffect(() => {
-    fetchPosts(id); // Ensure id is converted to a number
+    fetchPosts(id);
   }, [id]);
   
 

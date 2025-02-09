@@ -1,75 +1,209 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Modal, Button, Form } from 'react-bootstrap';
 
-const ManNavbar = () => {
+const ManNavbar = ({ setUserRole, setUserId, userId }) => {
+  const [showSettings, setShowSettings] = useState(false);
+  const [activeModal, setActiveModal] = useState(null);
+  const [step, setStep] = useState("currentPassword");
+  const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const navigate = useNavigate();
+
+  const [passwordData, setPasswordData] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmNewPassword: ''
+  });
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setPasswordData(prevData => ({ ...prevData, [name]: value }));
+  };
+
+  const validateNewPassword = (password) => {
+    return password.length >= 8 && /[^a-zA-Z0-9]/.test(password);
+  };
+
+  const handleCurrentPasswordSubmit = async (e) => {
+    e.preventDefault();
+
+    console.log("DEBUG: Verifying password for userId:", userId);
+
+    try {
+        const response = await fetch("http://35.214.101.36/Navbar.php", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                userId: userId,
+                currentPassword: passwordData.currentPassword
+            }),
+        });
+
+        const result = await response.json();
+        console.log("DEBUG: API response:", result);
+
+        if (response.ok && result.success) {
+            setStep("newPassword");
+        } else {
+            alert("Incorrect current password.");
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        alert("Failed to verify password.");
+    }
+  };
+
+  const handleNewPasswordSubmit = async (e) => {
+    e.preventDefault();
+
+    const { newPassword, confirmNewPassword } = passwordData;
+
+    if (newPassword !== confirmNewPassword) {
+      alert("New passwords do not match.");
+      return;
+    }
+
+    if (!validateNewPassword(newPassword)) {
+      alert("Password must be at least 8 characters long and contain at least one special character.");
+      return;
+    }
+
+    try {
+      const response = await fetch("http://35.214.101.36/Navbar.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: String(userId),
+          newPassword: newPassword
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) throw new Error(result.message || "Server error");
+
+      if (result.success) {
+        alert("Password successfully updated.");
+        setActiveModal(null);
+        setStep("currentPassword");
+        setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
+      } else {
+        alert(result.message || "Failed to update password.");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Error updating password: " + error.message);
+    }
+  };
+
+  const handleLogout = () => {
+    setUserRole(null);
+    setUserId(null);
+    navigate("/");
+  };
+
   return (
-    <div
-      className="bg-dark text-white vh-100"
-      style={{
-        width: '250px',
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-      }}
-    >
+    <div className="bg-dark text-white vh-100" style={{ width: '250px', position: 'fixed', top: '0', left: '0', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
       <div>
         <h3 className="text-center py-3">Manager Sidebar</h3>
         <ul className="nav flex-column px-3">
-          <li className="nav-item">
-            <Link to="/" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Home
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/projects" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Projects
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/tasks" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Tasks
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/employees" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Employees
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/forum" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Forum
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/todolist" className="nav-link text-white" style={{ padding: "10px 15px" }}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-              Todo List
-            </Link>
-          </li>
+          <li className="nav-item"><Link to="/" className="nav-link text-white hover-effect">Home</Link></li>
+          <li className="nav-item"><Link to="/projects" className="nav-link text-white hover-effect">Projects</Link></li>
+          <li className="nav-item"><Link to="/tasks" className="nav-link text-white hover-effect">Tasks</Link></li>
+          <li className="nav-item"><Link to="/employees" className="nav-link text-white hover-effect">Employees</Link></li>
+          <li className="nav-item"><Link to="/todolist" className="nav-link text-white hover-effect">TodoList</Link></li>
+          <li className="nav-item"><Link to="/forum" className="nav-link text-white hover-effect">Forum</Link></li>
+
         </ul>
       </div>
       <div className="px-3 pb-3">
-        <Link to="/settings" className="nav-link text-white" style={{ padding: "10px 15px" }}
-        onMouseEnter={(e) => (e.target.style.backgroundColor = "#495057")}
-        onMouseLeave={(e) => (e.target.style.backgroundColor = "transparent")}>
-        Settings
-        </Link>
+        <Button variant="link" className="nav-link text-white hover-effect" onClick={() => setActiveModal("settings")}>
+          Settings
+        </Button>
       </div>
+
+      {/* Settings Modal */}
+      <Modal show={activeModal === "settings"} onHide={() => setActiveModal(null)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Settings</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <Button variant="primary" onClick={() => setActiveModal("changePassword")} className="mb-2 w-100">
+            Change Password
+          </Button>
+          <Button variant="danger" onClick={() => setShowLogoutConfirmation(true)} className="w-100">
+            Log Out
+          </Button>
+        </Modal.Body>
+      </Modal>
+
+      {/* Change Password Modal */}
+      <Modal show={activeModal === "changePassword"} onHide={() => { 
+          setActiveModal(null); 
+          setPasswordData(prevData => ({ ...prevData, currentPassword: '' })); 
+        }}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Change Password</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {step === "currentPassword" ? (
+            <Form onSubmit={handleCurrentPasswordSubmit}>
+              <Form.Group>
+                <Form.Label>Current Password</Form.Label>
+                <Form.Control type="password" name="currentPassword" value={passwordData.currentPassword} onChange={handleInputChange} required />
+              </Form.Group>
+              <Button variant="primary" type="submit" className="mt-3">Next</Button>
+            </Form>
+          ) : (
+            <Form onSubmit={handleNewPasswordSubmit}>
+              <Form.Group>
+                <Form.Label>New Password</Form.Label>
+                <Form.Control type="password" name="newPassword" value={passwordData.newPassword} onChange={handleInputChange} required />
+              </Form.Group>
+              <Form.Group>
+                <Form.Label>Confirm New Password</Form.Label>
+                <Form.Control type="password" name="confirmNewPassword" value={passwordData.confirmNewPassword} onChange={handleInputChange} required />
+              </Form.Group>
+              <Button variant="primary" type="submit" className="mt-3">Change Password</Button>
+            </Form>
+          )}
+        </Modal.Body>
+      </Modal>
+
+      {/* Logout Confirmation Modal */}
+      <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Logout</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to log out?
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowLogoutConfirmation(false)}>
+            Cancel
+          </Button>
+          <Button variant="danger" onClick={handleLogout}>
+            Log Out
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <style>
+        {`
+          .hover-effect:hover {
+            background-color: #343a40; /* Darker background on hover */
+            color: #fff !important; /* Ensure text color stays white */
+            text-decoration: none; /* Remove underline on hover */
+          }
+        `}
+      </style>
+
+
     </div>
   );
 };

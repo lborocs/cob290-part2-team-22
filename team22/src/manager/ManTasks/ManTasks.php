@@ -1,4 +1,8 @@
 <?php
+// Enable error reporting for debugging (remove in production)
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
@@ -11,7 +15,7 @@ $dbname = 'db22';
 
 $mysqli = new mysqli($host, $username, $password, $dbname);
 if ($mysqli->connect_error) {
-    echo json_encode(["error" => "Database connection failed"]);
+    echo json_encode(["error" => "Database connection failed: " . $mysqli->connect_error]);
     exit();
 }
 
@@ -19,7 +23,6 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action == 'getUsers') {
-        // Fetch users including role
         $result = $mysqli->query("SELECT user_id, name, role FROM Users");
         $users = [];
         while ($row = $result->fetch_assoc()){
@@ -28,8 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode($users);
         exit();
     } elseif ($action == 'getTasks') {
-        // Fetch all tasks, including the assigned_by field
-        $result = $mysqli->query("SELECT individual_task_id, user_id, priority, deadline, status, binned, assigned_by FROM individual_tasks");
+        $result = $mysqli->query("SELECT * FROM individual_tasks");
         $tasks = [];
         while ($row = $result->fetch_assoc()){
             $tasks[] = $row;
@@ -39,7 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
-// Handle POST requests for creating or updating tasks
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     if (!$data) {
@@ -48,17 +49,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     
     if ($action == 'createTask') {
-        // Create a new task record, including the assigned_by field
+        // Expected fields: user_id, name, priority, deadline, description, assigned_by
         $user_id = intval($data['user_id']);
         $priority = $mysqli->real_escape_string($data['priority']);
         $deadline = $mysqli->real_escape_string($data['deadline']);
-        $assigned_by = isset($data['assigned_by']) ? intval($data['assigned_by']) : 0;
-        // Default status = 0 (in progress) and binned = 0
-        $status = 0;
+        $description = $mysqli->real_escape_string($data['description']);
+        $name = $mysqli->real_escape_string($data['name']);
+        $status = 0; // default in progress
         $binned = 0;
+        $assigned_by = intval($data['assigned_by']);
         
-        $query = "INSERT INTO individual_tasks (user_id, priority, deadline, status, binned, assigned_by) 
-                  VALUES ($user_id, '$priority', '$deadline', $status, $binned, $assigned_by)";
+        $query = "INSERT INTO individual_tasks (user_id, name, priority, deadline, description, status, binned, assigned_by) 
+                  VALUES ($user_id, '$name', '$priority', '$deadline', '$description', $status, $binned, $assigned_by)";
         if ($mysqli->query($query)) {
             echo json_encode(["success" => true, "individual_task_id" => $mysqli->insert_id]);
         } else {
@@ -66,13 +68,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     } elseif ($action == 'updateTask') {
-        // Update an existing task record (do not update assigned_by)
+        // Update an existing task. Expected fields: individual_task_id, and any of name, priority, deadline, description, status, binned, user_id.
         if (!isset($data['individual_task_id'])) {
             echo json_encode(["error" => "Task ID missing"]);
             exit();
         }
         $id = intval($data['individual_task_id']);
         $updates = [];
+        if (isset($data['name'])) {
+            $name = $mysqli->real_escape_string($data['name']);
+            $updates[] = "name='$name'";
+        }
         if (isset($data['priority'])) {
             $priority = $mysqli->real_escape_string($data['priority']);
             $updates[] = "priority='$priority'";
@@ -80,6 +86,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (isset($data['deadline'])) {
             $deadline = $mysqli->real_escape_string($data['deadline']);
             $updates[] = "deadline='$deadline'";
+        }
+        if (isset($data['description'])) {
+            $description = $mysqli->real_escape_string($data['description']);
+            $updates[] = "description='$description'";
         }
         if (isset($data['user_id'])) {
             $user_id = intval($data['user_id']);
@@ -103,6 +113,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             echo json_encode(["success" => true]);
         } else {
             echo json_encode(["error" => "Update failed", "details" => $mysqli->error]);
+        }
+        exit();
+    } elseif ($action == 'deleteTask') {
+        if (!isset($data['individual_task_id'])) {
+            echo json_encode(["error" => "Task ID missing"]);
+            exit();
+        }
+        $id = intval($data['individual_task_id']);
+        if ($mysqli->query("DELETE FROM individual_tasks WHERE individual_task_id = $id")) {
+            echo json_encode(["success" => true]);
+        } else {
+            echo json_encode(["error" => "Task deletion failed", "details" => $mysqli->error]);
         }
         exit();
     }
