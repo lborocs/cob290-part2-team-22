@@ -20,6 +20,11 @@ function EmpForum({ userId }) {
 
 
 function TopicsList({ userId }) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const [sortOrder, setSortOrder] = React.useState('newest');
+  const [tempSortOrder, setTempSortOrder] = React.useState('newest');
+
   const [users, setUsers] = React.useState([]);
   const [userFilter, setUserFilter] = React.useState(null);
   const [tempUserFilter, setTempUserFilter] = React.useState(null);
@@ -46,13 +51,13 @@ function TopicsList({ userId }) {
   const [topicToDelete, setTopicToDelete] = React.useState(null);
 
   React.useEffect(() => {
-    fetch('http://35.214.101.36/Forum.php?process=getUsers') //localhost/cob290-part2-team-22/team22/src/employee/EmpForum
+    fetch('http://35.214.101.36/Forum.php?process=getUsers') 
       .then(res => res.json())
       .then(data => setUsers(data))
       .catch(err => console.error('Error fetching users:', err));
     
     fetchTopics();
-  }, [technicalFilter, fromDate, toDate, userFilter]);
+  }, [technicalFilter, fromDate, toDate, userFilter, sortOrder, searchQuery]);
 
   const fetchTopics = () => {
     let url = 'http://35.214.101.36/Forum.php?process=getTopics';
@@ -62,6 +67,8 @@ function TopicsList({ userId }) {
     if (fromDate) params.push(`from_date=${fromDate}`);
     if (toDate) params.push(`to_date=${toDate}`);
     if (userFilter) params.push(`user_filter=${userFilter}`);
+    if (sortOrder) params.push(`sort_order=${sortOrder}`);
+    if (searchQuery) params.push(`search_query=${encodeURIComponent(searchQuery)}`);
     
     if (params.length > 0) {
       url += '&' + params.join('&');
@@ -130,12 +137,22 @@ function TopicsList({ userId }) {
         <button 
           className="btn btn-secondary" 
           onClick={() => { 
-            setTempTechnicalFilter(technicalFilter); 
+            setTempTechnicalFilter(technicalFilter);
+            setTempSortOrder(sortOrder);
             setShowFilterModal(true); 
           }}
         >
           <i className="bi bi-funnel"></i> Filter
         </button>
+      </div>
+      <div className="mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search topics by title or description..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
       </div>
       {topics.length === 0 ? (
         <div className="alert alert-info">No topics yet. Create one to get started!</div>
@@ -260,7 +277,8 @@ function TopicsList({ userId }) {
                 <h5 className="modal-title">Filter Topics</h5>
                 <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
               </div>
-              <div className="modal-body px-4">
+              <h6 className="mt-2 mb-0 px-3">Topic Type</h6>
+              <div className="modal-body px-3">
                 <div className="form-check">
                   <input
                     className="form-check-input"
@@ -326,8 +344,9 @@ function TopicsList({ userId }) {
                     />
                   </div>
                 </div>
+              
 
-                <label htmlFor="userFilter" className="form-label mt-3">Filter by Author</label>
+                <h6 className="mt-4">Author</h6>
                 <select 
                   className="form-select"
                   id="userFilter"
@@ -341,6 +360,34 @@ function TopicsList({ userId }) {
                     </option>
                   ))}
                 </select>
+
+                <h6 className="mt-4">Sort Order</h6>
+                <div className="form-check px-4.8">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="sortOrder"
+                    id="sortNewest"
+                    checked={tempSortOrder === 'newest'}
+                    onChange={() => setTempSortOrder('newest')}
+                  />
+                  <label className="form-check-label" htmlFor="sortNewest">
+                    Newest First
+                  </label>
+                </div>
+                <div className="form-check px-4">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="sortOrder"
+                    id="sortOldest"
+                    checked={tempSortOrder === 'oldest'}
+                    onChange={() => setTempSortOrder('oldest')}
+                  />
+                  <label className="form-check-label" htmlFor="sortOldest">
+                    Oldest First
+                  </label>
+                </div>
               </div>
 
               <div className="modal-footer">
@@ -351,6 +398,7 @@ function TopicsList({ userId }) {
                   setFromDate(tempFromDate || null);
                   setToDate(tempToDate || null);
                   setUserFilter(tempUserFilter);
+                  setSortOrder(tempSortOrder);
                   setShowFilterModal(false); 
                 }}
               >
@@ -403,10 +451,32 @@ function TopicView({ userId }) {
   const [postToEdit, setPostToEdit] = React.useState(null);
   const [editPostContent, setEditPostContent] = React.useState('');
 
+  const [searchPostQuery, setSearchPostQuery] = React.useState('');
+
+  const [users, setUsers] = React.useState([]);
+  const [userFilter, setUserFilter] = React.useState(null);
+  const [tempUserFilter, setTempUserFilter] = React.useState(null);
+
+  const [fromDate, setFromDate] = React.useState(null);
+  const [toDate, setToDate] = React.useState(null);
+  const [tempFromDate, setTempFromDate] = React.useState('');
+  const [tempToDate, setTempToDate] = React.useState('');
+
+  const [sortOrder, setSortOrder] = React.useState('newest');
+  const [tempSortOrder, setTempSortOrder] = React.useState('newest');
+
+  const [showFilterModal, setShowFilterModal] = React.useState(false);
+
   React.useEffect(() => {
+    // Fetch users for filter dropdown
+    fetch('http://35.214.101.36/Forum.php?process=getUsers')
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error('Error fetching users:', err));
+    
     fetchTopic(id);
     fetchPosts(id);
-  }, [id]);
+  }, [id, searchPostQuery, fromDate, toDate, userFilter, sortOrder]);
   
   const fetchTopic = (topicId) => {
     fetch(`http://35.214.101.36/Forum.php?process=getTopics&topic_id=${topicId}`)
@@ -417,17 +487,25 @@ function TopicView({ userId }) {
       .catch(err => console.error('Error fetching topic:', err));
   };
 
-  const fetchPosts = (id) => {
-    fetch(`http://35.214.101.36/Forum.php?process=getPosts&topic_id=${id}`)
+  const fetchPosts = (topicId) => {
+    let url = `http://35.214.101.36/Forum.php?process=getPosts&topic_id=${topicId}`;
+    
+    const params = [];
+    if (searchPostQuery) params.push(`search_post_query=${encodeURIComponent(searchPostQuery)}`);
+    if (fromDate) params.push(`from_date=${fromDate}`);
+    if (toDate) params.push(`to_date=${toDate}`);
+    if (userFilter) params.push(`user_filter=${userFilter}`);
+    if (sortOrder) params.push(`sort_order=${sortOrder}`);
+    
+    if (params.length > 0) {
+      url += '&' + params.join('&');
+    }
+
+    fetch(url)
       .then(res => res.json())
-      .then(data => {
-        console.log(data); // Debugging step to check the response
-        setPosts(data);
-      })
+      .then(data => setPosts(data))
       .catch(err => console.error('Error fetching posts:', err));
   };
-  
-  
 
   const handleCreatePost = (e) => {
     e.preventDefault();
@@ -514,9 +592,33 @@ function TopicView({ userId }) {
         <button className="btn btn-primary" onClick={() => setShowModal(true)}>
           <i className="bi bi-plus-circle"></i> Create Post
         </button>
-        <Link to=".." className="btn btn-secondary">
-          <i className="bi bi-arrow-left"></i> Back to Topics
-        </Link>
+        
+        <div className="d-flex align-items-center gap-2">
+          <button 
+            className="btn btn-secondary" 
+            onClick={() => {
+              setTempUserFilter(userFilter);
+              setTempFromDate(fromDate || '');
+              setTempToDate(toDate || '');
+              setTempSortOrder(sortOrder);
+              setShowFilterModal(true);
+            }}
+          >
+            <i className="bi bi-funnel"></i> Filter
+          </button>
+          <Link to=".." className="btn btn-secondary">
+            <i className="bi bi-arrow-left"></i> Back to Topics
+          </Link>
+        </div>
+      </div>
+      <div className="mb-3">
+        <input
+          type="text"
+          className="form-control"
+          placeholder="Search posts by content..."
+          value={searchPostQuery}
+          onChange={(e) => setSearchPostQuery(e.target.value)}
+        />
       </div>
       {posts.length === 0 ? (
         <div className="alert alert-info">No posts yet. Be the first to create one!</div>
@@ -650,6 +752,106 @@ function TopicView({ userId }) {
                   <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Filter Modal */}
+      {showFilterModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Filter Posts</h5>
+                <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-4 px-3">
+                  <h6>Date Range</h6>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label htmlFor="postFromDate" className="form-label">From Date</label>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        id="postFromDate"
+                        value={tempFromDate}
+                        onChange={(e) => setTempFromDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label htmlFor="postToDate" className="form-label">To Date</label>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        id="postToDate"
+                        value={tempToDate}
+                        onChange={(e) => setTempToDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <h6 className="mt-4">Author</h6>
+                  <select 
+                    className="form-select"
+                    value={tempUserFilter || ''}
+                    onChange={(e) => setTempUserFilter(e.target.value || null)}
+                  >
+                    <option value="">Any User</option>
+                    {users.map(user => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.name} ({user.job_title})
+                      </option>
+                    ))}
+                  </select>
+
+                  <h6 className="mt-4">Sort Order</h6>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="postSortOrder"
+                      id="postSortNewest"
+                      checked={tempSortOrder === 'newest'}
+                      onChange={() => setTempSortOrder('newest')}
+                    />
+                    <label className="form-check-label" htmlFor="postSortNewest">
+                      Newest First
+                    </label>
+                  </div>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="postSortOrder"
+                      id="postSortOldest"
+                      checked={tempSortOrder === 'oldest'}
+                      onChange={() => setTempSortOrder('oldest')}
+                    />
+                    <label className="form-check-label" htmlFor="postSortOldest">
+                      Oldest First
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setFromDate(tempFromDate || null);
+                    setToDate(tempToDate || null);
+                    setUserFilter(tempUserFilter);
+                    setSortOrder(tempSortOrder);
+                    setShowFilterModal(false);
+                  }}
+                >
+                  Apply Filter
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>
