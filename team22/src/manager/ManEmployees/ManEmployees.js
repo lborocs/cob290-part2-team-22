@@ -3,7 +3,7 @@ import { Container, Table, Button, Form, Modal, InputGroup, Dropdown, DropdownBu
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { FiEye } from 'react-icons/fi';
 
-const API_URL = 'http://35.214.101.36/Employees.php';
+const API_URL = 'http://35.214.101.36/ManEmployees.php';
 const currentUser = { user_id: 3, role: "Manager", name: "John Manager" };
 
 const ManEmployees = () => {
