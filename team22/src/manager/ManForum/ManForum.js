@@ -182,7 +182,6 @@ function TopicsList({ userId }) {
                     <strong><i className="bi bi-gear-fill"></i> Type:</strong> {isTechnical ? 'Technical' : 'Non-Technical'}
                   </div>
                 </div>
-                {isOwner && (
                   <div className="dropdown ms-3">
                     <button
                       className="btn btn-light border dropdown-toggle"
@@ -205,7 +204,6 @@ function TopicsList({ userId }) {
                       {/* Add more options (like Edit) here if desired */}
                     </ul>
                   </div>
-                )}
               </li>
             );
           })}
@@ -639,7 +637,6 @@ function TopicView({ userId }) {
                     <i className="bi bi-chat-text-fill"></i> {post.content}
                   </div>
                 </div>
-                {isOwner && (
                   <div className="dropdown">
                     <button 
                       className="btn btn-light border dropdown-toggle" 
@@ -651,11 +648,13 @@ function TopicView({ userId }) {
                       <i className="bi bi-three-dots"></i>
                     </button>
                     <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`postMenu${post.post_id}`}>
-                      <li>
-                        <button className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setShowEditModal(true); setPostToEdit(post); setEditPostContent(post.content); }}>
-                          <i className="bi bi-pencil-square"></i> Edit
-                        </button>
-                      </li>
+                      {isOwner && (
+                        <li>
+                          <button className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setShowEditModal(true); setPostToEdit(post); setEditPostContent(post.content); }}>
+                            <i className="bi bi-pencil-square"></i> Edit
+                          </button>
+                        </li>
+                      )}
                       <li>
                         <button className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setShowDeleteModal(true); setPostToDelete(post); }}>
                           <i className="bi bi-trash"></i> Delete
@@ -663,7 +662,6 @@ function TopicView({ userId }) {
                       </li>
                     </ul>
                   </div>
-                )}
               </li>
             );
           })}
