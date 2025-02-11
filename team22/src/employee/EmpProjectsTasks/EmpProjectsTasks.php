@@ -19,17 +19,26 @@ if ($mysqli->connect_error) {
 $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+
+    // -----------------------------
+    // Get Projects for a given user
+    // -----------------------------
     if ($action == 'getProjects') {
         $user_id = intval($_GET['user_id']);
-        $query = "SELECT DISTINCT p.*, 
-                  (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.project_id) as total_tasks,
-                  (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.project_id AND pt.status = 1) as completed_tasks,
-                  (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.project_id AND pt.user_id = $user_id) as user_total_tasks,
-                  (SELECT COUNT(*) FROM project_tasks pt WHERE pt.project_id = p.project_id AND pt.user_id = $user_id AND pt.status = 1) as user_completed_tasks
-                  FROM Projects p 
-                  LEFT JOIN project_users pu ON p.project_id = pu.project_id 
-                  LEFT JOIN project_tasks pt ON p.project_id = pt.project_id
-                  WHERE (pu.user_id = $user_id OR pt.user_id = $user_id) AND p.binned = 0
+
+        // Retrieve projects where the user is either a member (project_users) or assigned tasks (project_tasks)
+        $query = "SELECT p.*, 
+                    (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.project_id) AS total_tasks,
+                    (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.project_id AND status = 1) AS completed_tasks,
+                    (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.project_id AND user_id = $user_id) AS user_total_tasks,
+                    (SELECT COUNT(*) FROM project_tasks WHERE project_id = p.project_id AND user_id = $user_id AND status = 1) AS user_completed_tasks
+                  FROM Projects p
+                  WHERE p.project_id IN (
+                    SELECT project_id FROM project_users WHERE user_id = $user_id
+                    UNION
+                    SELECT project_id FROM project_tasks WHERE user_id = $user_id
+                  )
+                  AND p.binned = 0
                   ORDER BY p.deadline ASC";
         
         $result = $mysqli->query($query);
@@ -46,23 +55,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $user_total = $row['user_total_tasks'];
             $user_completed = $row['user_completed_tasks'];
             
+            // Calculate progress percentages (or 0 if no tasks)
             $team_progress = $total > 0 ? ($completed / $total) * 100 : 0;
             $user_progress = $user_total > 0 ? ($user_completed / $user_total) * 100 : 0;
             
+            // Round the values and mark project as completed if team_progress is 100 or more
             $row['team_progress'] = round($team_progress, 2);
             $row['user_progress'] = round($user_progress, 2);
-            $row['completed'] = $team_progress == 100 ? 1 : 0;
+            $row['completed'] = ($team_progress >= 100 ? 1 : 0);
+            
             $projects[] = $row;
         }
         error_log("Projects fetched for user $user_id: " . json_encode($projects));
         echo json_encode($projects);
         exit();
+        
+    // -----------------------------
+    // Get Tasks for a given project and user
+    // -----------------------------
     } elseif ($action == 'getTasks') {
         $project_id = intval($_GET['project_id']);
         $user_id = intval($_GET['user_id']);
-        $query = "SELECT pt.* FROM project_tasks pt
-                  WHERE pt.project_id = $project_id AND pt.user_id = $user_id
-                  ORDER BY pt.task_id ASC";
+        $query = "SELECT * FROM project_tasks
+                  WHERE project_id = $project_id AND user_id = $user_id
+                  ORDER BY task_id ASC";
         
         $result = $mysqli->query($query);
         if (!$result) {
@@ -81,6 +97,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 }
 
+// ---------------------------------
+// Update a task’s status (via POST)
+// ---------------------------------
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     if (!$data) {
@@ -94,6 +113,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $user_id = intval($data['user_id']);
         $status = intval($data['status']);
         
+        // Ensure the task belongs to the current user
         $check_query = "SELECT * FROM project_tasks WHERE task_id = $task_id AND user_id = $user_id";
         $check_result = $mysqli->query($check_query);
         
@@ -103,31 +123,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit();
         }
         
+        // Update the task status
         $query = "UPDATE project_tasks SET status = $status WHERE task_id = $task_id";
         if ($mysqli->query($query)) {
+            // Retrieve the project id
             $project_query = "SELECT project_id FROM project_tasks WHERE task_id = $task_id";
             $project_result = $mysqli->query($project_query);
             $project_row = $project_result->fetch_assoc();
             $project_id = $project_row['project_id'];
         
+            // Recalculate progress for the project
             $progress_query = "SELECT 
-                             (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id) as total,
-                             (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND status = 1) as completed,
-                             (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND user_id = $user_id) as user_total,
-                             (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND user_id = $user_id AND status = 1) as user_completed";
+                                (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id) AS total,
+                                (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND status = 1) AS completed,
+                                (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND user_id = $user_id) AS user_total,
+                                (SELECT COUNT(*) FROM project_tasks WHERE project_id = $project_id AND user_id = $user_id AND status = 1) AS user_completed";
             $progress_result = $mysqli->query($progress_query);
             $progress_row = $progress_result->fetch_assoc();
-            $team_progress = ($progress_row['completed'] / $progress_row['total']) * 100;
-            $user_progress = ($progress_row['user_completed'] / $progress_row['user_total']) * 100;
+            $team_progress = $progress_row['total'] > 0 ? ($progress_row['completed'] / $progress_row['total']) * 100 : 0;
+            $user_progress = $progress_row['user_total'] > 0 ? ($progress_row['user_completed'] / $progress_row['user_total']) * 100 : 0;
         
+            // Optionally update the overall project progress in the Projects table
             $update_project = "UPDATE Projects SET progress = $team_progress WHERE project_id = $project_id";
             $mysqli->query($update_project);
         
             error_log("Task $task_id updated successfully. New status: $status, Team progress: $team_progress%, User progress: $user_progress%");
-            echo json_encode(["success" => true, "team_progress" => $team_progress, "user_progress" => $user_progress]);
+            echo json_encode([
+              "success" => true,
+              "team_progress" => $team_progress,
+              "user_progress" => $user_progress
+            ]);
         } else {
             error_log("Error updating task: " . $mysqli->error);
-            echo json_encode(["error" => "Update failed", "details" => $mysqli->error]);
+            echo json_encode([
+              "error" => "Update failed",
+              "details" => $mysqli->error
+            ]);
         }
         exit();
     }
@@ -135,4 +166,3 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $mysqli->close();
 ?>
-
