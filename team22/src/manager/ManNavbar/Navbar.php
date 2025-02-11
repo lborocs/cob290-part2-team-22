@@ -20,6 +20,34 @@ $input = file_get_contents("php://input");
 $data = json_decode($input, true);
 
 if ($_SERVER["REQUEST_METHOD"] === "POST") {
+    // Fetch user details
+    if (isset($data['fetchUser']) && isset($data['userId'])) {
+        $userId = $data['userId'];
+
+        $stmt = $conn->prepare("SELECT username, password, role, name, job_title FROM Users WHERE user_id = ?");
+        $stmt->bind_param("s", $userId);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        $user = $result->fetch_assoc();
+        $stmt->close();
+
+        if ($user) {
+            echo json_encode([
+                'success' => true,
+                'user' => [
+                    'username' => $user['username'],
+                    'password' => $user['password'], 
+                    'role' => $user['role'],
+                    'name' => $user['name'], 
+                    'job_title' => $user['job_title']
+                ]
+            ]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'User not found']);
+        }
+        exit();
+    }
+
     // Password Verification
     if (isset($data['userId']) && isset($data['currentPassword'])) {
         $userId = $data['userId'];
@@ -35,10 +63,10 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         if ($user && $currentPassword === $user['password']) {
             echo json_encode(['success' => true, 'message' => 'Password verified']);
-            exit(); // ✅ Stop further execution after verification
+            exit(); // Stop further execution after verification
         } else {
             echo json_encode(['success' => false, 'message' => 'Incorrect password']);
-            exit(); // ✅ Stop execution if verification fails
+            exit(); // Stop execution if verification fails
         }
     }
 
@@ -55,12 +83,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
 
         // Update password in Users table
         $stmt = $conn->prepare("UPDATE Users SET password = ? WHERE user_id = ?");
-        $stmt->bind_param("ss", $newPassword, $userId); // ✅ Use "ss" (both values are strings)
+        $stmt->bind_param("ss", $newPassword, $userId); //  Use "ss" (both values are strings)
 
         if ($stmt->execute()) {
             echo json_encode(["success" => true, "message" => "Password updated successfully."]);
         } else {
-            echo json_encode(["success" => false, "message" => "Failed to update password.", "error" => $stmt->error]); // ✅ Debugging info
+            echo json_encode(["success" => false, "message" => "Failed to update password.", "error" => $stmt->error]); // Debugging info
         }
 
         $stmt->close();

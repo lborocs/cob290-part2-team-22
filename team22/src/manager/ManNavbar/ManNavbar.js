@@ -1,23 +1,60 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Dropdown, Button, Form, Modal } from 'react-bootstrap';
 
 const ManNavbar = ({ setUserRole, setUserId, userId }) => {
-  const [showSettings, setShowSettings] = useState(false);
-  const [activeModal, setActiveModal] = useState(null);
   const [step, setStep] = useState("currentPassword");
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
+  const [showProfileModal, setShowProfileModal] = useState(false); // State for profile modal
   const navigate = useNavigate();
+  const [username, setUsername] = useState('');
+  const [role, setRole] = useState('');
+  const [name, setName] = useState('');
+  const [job_title, setJobTitle] = useState('');
+
+  useEffect(() => {
+    if (userId) {
+      fetchUserDetails();
+    }
+  }, [userId]);
+
+  const fetchUserDetails = async () => {
+    try {
+      const response = await fetch("http://35.214.101.36/Navbar.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          fetchUser: true,
+          userId: userId,
+        }),
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        setUsername(result.user.username);
+        setRole(result.user.role);
+        setName(result.user.name);
+        setJobTitle(result.user.job_title);
+      } else {
+        console.error("Failed to fetch user details:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching user details:", error);
+    }
+  };
 
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
-    confirmNewPassword: ''
+    confirmNewPassword: '',
   });
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setPasswordData(prevData => ({ ...prevData, [name]: value }));
+    setPasswordData((prevData) => ({ ...prevData, [name]: value }));
   };
 
   const validateNewPassword = (password) => {
@@ -30,28 +67,28 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
     console.log("DEBUG: Verifying password for userId:", userId);
 
     try {
-        const response = await fetch("http://35.214.101.36/Navbar.php", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-                userId: userId,
-                currentPassword: passwordData.currentPassword
-            }),
-        });
+      const response = await fetch("http://35.214.101.36/Navbar.php", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          userId: userId,
+          currentPassword: passwordData.currentPassword,
+        }),
+      });
 
-        const result = await response.json();
-        console.log("DEBUG: API response:", result);
+      const result = await response.json();
+      console.log("DEBUG: API response:", result);
 
-        if (response.ok && result.success) {
-            setStep("newPassword");
-        } else {
-            alert("Incorrect current password.");
-        }
+      if (response.ok && result.success) {
+        setStep("newPassword");
+      } else {
+        alert("Incorrect current password.");
+      }
     } catch (error) {
-        console.error("Error:", error);
-        alert("Failed to verify password.");
+      console.error("Error:", error);
+      alert("Failed to verify password.");
     }
   };
 
@@ -60,13 +97,13 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
 
     const { newPassword, confirmNewPassword } = passwordData;
 
-    if (newPassword !== confirmNewPassword) {
-      alert("New passwords do not match.");
+    if (!validateNewPassword(newPassword)) {
+      alert("Password must be at least 8 characters long and contain at least one special character.");
       return;
     }
 
-    if (!validateNewPassword(newPassword)) {
-      alert("Password must be at least 8 characters long and contain at least one special character.");
+    if (newPassword !== confirmNewPassword) {
+      alert("New passwords do not match.");
       return;
     }
 
@@ -78,7 +115,7 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
         },
         body: JSON.stringify({
           userId: String(userId),
-          newPassword: newPassword
+          newPassword: newPassword,
         }),
       });
 
@@ -88,7 +125,6 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
 
       if (result.success) {
         alert("Password successfully updated.");
-        setActiveModal(null);
         setStep("currentPassword");
         setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' });
       } else {
@@ -106,73 +142,154 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
     navigate("/");
   };
 
+  // Reset step to "currentPassword" and clear password fields when profile modal is shown
+  const handleProfileModalShow = () => {
+    setShowProfileModal(true);
+    setStep("currentPassword"); // Reset step to "currentPassword"
+    setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' }); // Clear password fields
+  };
+
+  // Clear password fields when modal is exited
+  const handleProfileModalHide = () => {
+    setShowProfileModal(false);
+    setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' }); // Clear password fields
+  };
+
   return (
-    <div className="bg-dark text-white vh-100" style={{ width: '250px', position: 'fixed', top: '0', left: '0', overflowY: 'auto', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+    <div
+      className="bg-dark text-white vh-100"
+      style={{
+        width: '250px',
+        position: 'fixed',
+        top: '0',
+        left: '0',
+        overflowY: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'space-between',
+      }}
+    >
       <div>
         <h3 className="text-center py-3">Manager Sidebar</h3>
         <ul className="nav flex-column px-3">
-          <li className="nav-item"><Link to="/" className="nav-link text-white hover-effect">Home</Link></li>
-          <li className="nav-item"><Link to="/projects" className="nav-link text-white hover-effect">Projects</Link></li>
-          <li className="nav-item"><Link to="/tasks" className="nav-link text-white hover-effect">Tasks</Link></li>
-          <li className="nav-item"><Link to="/employees" className="nav-link text-white hover-effect">Employees</Link></li>
-          <li className="nav-item"><Link to="/todolist" className="nav-link text-white hover-effect">TodoList</Link></li>
-          <li className="nav-item"><Link to="/forum" className="nav-link text-white hover-effect">Forum</Link></li>
-
+          <li className="nav-item">
+            <Link to="/" className="nav-link text-white hover-effect">
+              Home
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/projects" className="nav-link text-white hover-effect">
+              Projects
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/tasks" className="nav-link text-white hover-effect">
+              Tasks
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/employees" className="nav-link text-white hover-effect">
+              Employees
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/todolist" className="nav-link text-white hover-effect">
+              TodoList
+            </Link>
+          </li>
+          <li className="nav-item">
+            <Link to="/forum" className="nav-link text-white hover-effect">
+              Forum
+            </Link>
+          </li>
         </ul>
       </div>
       <div className="px-3 pb-3">
-        <Button variant="link" className="nav-link text-white hover-effect" onClick={() => setActiveModal("settings")}>
-          Settings
-        </Button>
+        <Dropdown drop="up" align="end">
+          <Dropdown.Toggle variant="link" className="nav-link text-white hover-effect">
+            {name}
+          </Dropdown.Toggle>
+          <Dropdown.Menu>
+            <Dropdown.Item onClick={handleProfileModalShow}>Profile</Dropdown.Item>
+            <Dropdown.Item onClick={() => setShowLogoutConfirmation(true)}>Log Out</Dropdown.Item>
+          </Dropdown.Menu>
+        </Dropdown>
       </div>
 
-      {/* Settings Modal */}
-      <Modal show={activeModal === "settings"} onHide={() => setActiveModal(null)}>
+      {/* Profile Modal */}
+      <Modal show={showProfileModal} onHide={handleProfileModalHide}>
         <Modal.Header closeButton>
-          <Modal.Title>Settings</Modal.Title>
+          <Modal.Title>Profile</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Button variant="primary" onClick={() => setActiveModal("changePassword")} className="mb-2 w-100">
-            Change Password
-          </Button>
-          <Button variant="danger" onClick={() => setShowLogoutConfirmation(true)} className="w-100">
-            Log Out
-          </Button>
-        </Modal.Body>
-      </Modal>
+          <Form>
+            <Form.Group>
+              <Form.Label>Username</Form.Label>
+              <Form.Control type="text" value={username} readOnly />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Role</Form.Label>
+              <Form.Control type="text" value={role} readOnly />
+            </Form.Group>
+            <Form.Group>
+              <Form.Label>Job Title</Form.Label>
+              <Form.Control type="text" value={job_title} readOnly />
+            </Form.Group>
+          </Form>
 
-      {/* Change Password Modal */}
-      <Modal show={activeModal === "changePassword"} onHide={() => { 
-          setActiveModal(null); 
-          setPasswordData(prevData => ({ ...prevData, currentPassword: '' })); 
-        }}
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Change Password</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {step === "currentPassword" ? (
+          {/* Change Password Section */}
+          <h5 className="mt-4">Change Password</h5>
+          {step === "currentPassword" && (
             <Form onSubmit={handleCurrentPasswordSubmit}>
               <Form.Group>
                 <Form.Label>Current Password</Form.Label>
-                <Form.Control type="password" name="currentPassword" value={passwordData.currentPassword} onChange={handleInputChange} required />
+                <Form.Control
+                  type="password"
+                  name="currentPassword"
+                  value={passwordData.currentPassword}
+                  onChange={handleInputChange}
+                  required
+                />
               </Form.Group>
-              <Button variant="primary" type="submit" className="mt-3">Next</Button>
+              <Button variant="primary" type="submit" className="mt-3">
+                Verify Password
+              </Button>
             </Form>
-          ) : (
+          )}
+
+          {step === "newPassword" && (
             <Form onSubmit={handleNewPasswordSubmit}>
               <Form.Group>
                 <Form.Label>New Password</Form.Label>
-                <Form.Control type="password" name="newPassword" value={passwordData.newPassword} onChange={handleInputChange} required />
+                <Form.Control
+                  type="password"
+                  name="newPassword"
+                  value={passwordData.newPassword}
+                  onChange={handleInputChange}
+                  required
+                />
               </Form.Group>
               <Form.Group>
                 <Form.Label>Confirm New Password</Form.Label>
-                <Form.Control type="password" name="confirmNewPassword" value={passwordData.confirmNewPassword} onChange={handleInputChange} required />
+                <Form.Control
+                  type="password"
+                  name="confirmNewPassword"
+                  value={passwordData.confirmNewPassword}
+                  onChange={handleInputChange}
+                  required
+                />
               </Form.Group>
-              <Button variant="primary" type="submit" className="mt-3">Change Password</Button>
+              <Button variant="primary" type="submit" className="mt-3">
+                Change Password
+              </Button>
             </Form>
           )}
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleProfileModalHide}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Logout Confirmation Modal */}
@@ -180,9 +297,7 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
         <Modal.Header closeButton>
           <Modal.Title>Confirm Logout</Modal.Title>
         </Modal.Header>
-        <Modal.Body>
-          Are you sure you want to log out?
-        </Modal.Body>
+        <Modal.Body>Are you sure you want to log out?</Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowLogoutConfirmation(false)}>
             Cancel
@@ -202,8 +317,6 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
           }
         `}
       </style>
-
-
     </div>
   );
 };
