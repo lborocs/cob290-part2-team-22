@@ -9,7 +9,8 @@ import {
     Modal,
     Badge,
     ButtonGroup,
-    Dropdown
+    Dropdown,
+    Card
 } from 'react-bootstrap';
 import TodoProgressCharts from './TodoProgressCharts';
 import React, { useState } from 'react';
@@ -41,11 +42,10 @@ function TodoList({ userId }) {
             const response = await fetch(`http://35.214.101.36/ToDoList.php?user_id=${userId}`);
             const data = await response.json();
     
-            // Map database fields to match the state keys
             const formattedData = data.map(task => ({
                 ...task,
-                name: task.title || '',        // Map 'title' to 'name'
-                dueDate: task.due_date || '',  // Map 'due_date' to 'dueDate'
+                name: task.title || '',
+                dueDate: task.due_date || '',
             }));
     
             setTodos(formattedData);
@@ -54,16 +54,13 @@ function TodoList({ userId }) {
         }
     };
     
-    
-
     const [newTodo, setNewTodo] = useState({
-        name: '',          // Ensure 'name' key exists
+        name: '',
         description: '',
         status: 'pending',
         priority: 'low',
         dueDate: ''
     });
-    
 
     const handleClose = () => {
         setShowModal(false);
@@ -81,11 +78,11 @@ function TodoList({ userId }) {
             const task = todos[index];
             setEditingIndex(index);
             setNewTodo({
-                name: task.name,               // Use 'name' instead of 'title'
+                name: task.name,
                 description: task.description,
                 status: task.status?.toLowerCase() || 'pending',
                 priority: task.priority?.toLowerCase() || 'low',
-                dueDate: task.dueDate,         // Use 'dueDate' instead of 'due_date'
+                dueDate: task.dueDate,
                 todo_id: task.todo_id
             });
         } else {
@@ -99,7 +96,6 @@ function TodoList({ userId }) {
         }
         setShowModal(true);
     };
-    
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
@@ -118,7 +114,7 @@ function TodoList({ userId }) {
         const method = editingIndex !== null ? 'PUT' : 'POST';
         const payload = {
             todo_id: editingIndex !== null ? todos[editingIndex].todo_id : undefined,
-            user_id: userId, // Replace with actual user ID if dynamic
+            user_id: userId,
             title: newTodo.name,
             description: newTodo.description,
             status: newTodo.status.charAt(0).toUpperCase() + newTodo.status.slice(1),
@@ -132,17 +128,12 @@ function TodoList({ userId }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            fetchTodos(); // Refresh the task list
+            fetchTodos();
             handleClose();
         } catch (error) {
             console.error('Error saving task:', error);
         }
     };
-    
-
-
-
-
 
     const toggleTodo = async (index) => {
         const updatedTodo = { ...todos[index] };
@@ -157,17 +148,15 @@ function TodoList({ userId }) {
                     status: updatedTodo.status
                 })
             });
-            fetchTodos(); // Refresh the task list
+    
+            // Update the local state to reflect the new status
+            const updatedTodos = [...todos];
+            updatedTodos[index] = updatedTodo;
+            setTodos(updatedTodos);
         } catch (error) {
             console.error('Error updating task status:', error);
         }
     };
-    // const toggleTodo = (index) => {
-    //     const newTodos = [...todos];
-    //     newTodos[index].completed = !newTodos[index].completed;
-    //     newTodos[index].status = newTodos[index].completed ? 'completed' : 'pending';
-    //     setTodos(newTodos);
-    // };
 
     const confirmDelete = async () => {
         if (deleteIndex !== null) {
@@ -178,41 +167,40 @@ function TodoList({ userId }) {
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ todo_id: todoId })
                 });
-                fetchTodos(); // Refresh the task list
+                const deletedTodo = todos[deleteIndex];
+                setDeletedTodos([...deletedTodos, { ...deletedTodo, deletedAt: new Date() }]);
+                fetchTodos();
                 handleCloseDeleteModal();
             } catch (error) {
                 console.error('Error deleting task:', error);
             }
         }
     };
-    
 
-  // New bin-related handlers
-  const handleBinItemSelect = (index) => {
-      setSelectedBinItems(prev => {
-          if (prev.includes(index)) {
-              return prev.filter(i => i !== index);
-          }
-          return [...prev, index];
-      });
-  };
+    const handleBinItemSelect = (index) => {
+        setSelectedBinItems(prev => {
+            if (prev.includes(index)) {
+                return prev.filter(i => i !== index);
+            }
+            return [...prev, index];
+        });
+    };
 
-  const handleRestoreConfirm = () => {
-      const itemsToRestore = selectedBinItems.map(index => deletedTodos[index]);
-      setTodos([...todos, ...itemsToRestore]);
-      setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
-      setSelectedBinItems([]);
-      setShowRestoreModal(false);
-      setShowBinModal(false);
-  };
+    const handleRestoreConfirm = () => {
+        const itemsToRestore = selectedBinItems.map(index => deletedTodos[index]);
+        setTodos([...todos, ...itemsToRestore]);
+        setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
+        setSelectedBinItems([]);
+        setShowRestoreModal(false);
+        setShowBinModal(false);
+    };
 
-  const handlePermanentDeleteConfirm = () => {
-      setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
-      setSelectedBinItems([]);
-      setShowPermanentDeleteModal(false);
-  };
+    const handlePermanentDeleteConfirm = () => {
+        setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
+        setSelectedBinItems([]);
+        setShowPermanentDeleteModal(false);
+    };
 
-    // New functions for delete confirmation
     const handleShowDeleteModal = (index) => {
         setDeleteIndex(index);
         setShowDeleteModal(true);
@@ -222,7 +210,6 @@ function TodoList({ userId }) {
         setDeleteIndex(null);
         setShowDeleteModal(false);
     };
-
 
     const getPriorityBadgeVariant = (priority) => {
         switch (priority) {
@@ -247,127 +234,6 @@ function TodoList({ userId }) {
             [filterType]: value
         }));
     };
-
-
-
-
-    
-
-    // return (
-    //     <Container className="mt-5">
-    //     <Row className="justify-content-md-center">
-    //         <Col md={8}>
-    //             <div className="d-flex justify-content-between align-items-center mb-4">
-    //                 <h1>To-do List</h1>
-    //                 <div>
-    //                     <Button 
-    //                         variant="outline-secondary" 
-    //                         className="me-2"
-    //                         onClick={() => setShowCharts(!showCharts)}
-    //                     >
-    //                     {showCharts ? 'List View' : 'Charts View'}
-    //                     </Button>
-    //                     <Button 
-    //                         variant="outline-secondary" 
-    //                         className="me-2"
-    //                         onClick={() => setShowBinModal(true)}
-    //                     >
-    //                         🗑️ Bin ({deletedTodos.length})
-    //                     </Button>
-    //                     <Button variant="primary" onClick={() => handleShow()}>
-    //                         Add New Task
-    //                     </Button>
-    //                 </div>
-    //             </div>
-
-    //             {showCharts ? (
-    //                 <TodoProgressCharts userId={userId} />
-    //             ) : (
-    //               <>
-
-    //             {/* Filters */}
-    //             <div className="mb-4 d-flex gap-3">
-    //                 <Dropdown>
-    //                     <Dropdown.Toggle variant="outline-secondary">
-    //                         Priority: {filters.priority === 'all' ? 'All' : filters.priority}
-    //                     </Dropdown.Toggle>
-    //                     <Dropdown.Menu>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'all')}>All</Dropdown.Item>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'low')}>Low</Dropdown.Item>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'medium')}>Medium</Dropdown.Item>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'high')}>High</Dropdown.Item>
-    //                     </Dropdown.Menu>
-    //                 </Dropdown>
-
-    //                 <Dropdown>
-    //                     <Dropdown.Toggle variant="outline-secondary">
-    //                         Status: {filters.status === 'all' ? 'All' : filters.status}
-    //                     </Dropdown.Toggle>
-    //                     <Dropdown.Menu>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'all')}>All</Dropdown.Item>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'pending')}>Pending</Dropdown.Item>
-    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'completed')}>Completed</Dropdown.Item>
-    //                     </Dropdown.Menu>
-    //                 </Dropdown>
-    //             </div>
-
-    //             <ListGroup>
-    //                 {filteredTodos.map((todo, index) => (
-    //                     <ListGroup.Item 
-    //                         key={index} 
-    //                         className="d-flex justify-content-between align-items-start py-3"
-    //                     >
-    //                         <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
-    //                             <div className="d-flex align-items-center">
-    //                                 <span 
-    //                                     style={{ 
-    //                                         textDecoration: todo.completed ? 'line-through' : 'none',
-    //                                         cursor: 'pointer',
-    //                                         marginRight: '10px'
-    //                                     }}
-    //                                     onClick={() => toggleTodo(index)}
-    //                                 >
-    //                                     <h5 className="mb-1">{todo.name}</h5>
-    //                                 </span>
-    //                                 <Badge 
-    //                                     bg={getPriorityBadgeVariant(todo.priority)}
-    //                                     className="me-2"
-    //                                 >
-    //                                     {todo.priority}
-    //                                 </Badge>
-    //                                 <Badge 
-    //                                     bg={todo.status === 'completed' ? 'success' : 'secondary'}
-    //                                 >
-    //                                     {todo.status}
-    //                                 </Badge>
-    //                             </div>
-    //                             <p className="mb-1 text-muted">{todo.description}</p>
-    //                             <small className="text-muted">
-    //                                 Due Date: {todo.dueDate || 'No due date'}
-    //                             </small>
-    //                         </div>
-    //                         <ButtonGroup>
-    //                             <Button 
-    //                                 variant="outline-primary" 
-    //                                 size="sm" 
-    //                                 onClick={() => handleShow(index)}
-    //                                 className="me-2"
-    //                             >
-    //                                 Edit
-    //                             </Button>
-    //                             <Button 
-    //                                 variant="outline-danger" 
-    //                                 size="sm" 
-    //                                 onClick={() => handleShowDeleteModal(index)}
-    //                             >
-    //                                 Delete
-    //                             </Button>
-    //                         </ButtonGroup>
-    //                     </ListGroup.Item>
-    //                 ))}
-    //             </ListGroup>
-    //             </>
-    //             )}
 
     return (
         <Container className="mt-5">
@@ -400,7 +266,6 @@ function TodoList({ userId }) {
                         <TodoProgressCharts userId={userId} />
                     ) : (
                         <>
-                            {/* Filters */}
                             <div className="mb-4 d-flex gap-3">
                                 <Dropdown>
                                     <Dropdown.Toggle variant="outline-primary">
@@ -488,12 +353,7 @@ function TodoList({ userId }) {
                         </>
                     )}
 
-
-
-
-                    
-
-                <Modal 
+                    <Modal 
                         show={showBinModal} 
                         onHide={() => {
                             setShowBinModal(false);
@@ -559,7 +419,6 @@ function TodoList({ userId }) {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Restore Confirmation Modal */}
                     <Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)}>
                         <Modal.Header closeButton>
                             <Modal.Title>Confirm Restore</Modal.Title>
@@ -577,7 +436,6 @@ function TodoList({ userId }) {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Permanent Delete Confirmation Modal */}
                     <Modal 
                         show={showPermanentDeleteModal} 
                         onHide={() => setShowPermanentDeleteModal(false)}
@@ -602,7 +460,6 @@ function TodoList({ userId }) {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Task Modal Form */}
                     <Modal show={showModal} onHide={handleClose}>
                         <Modal.Header closeButton>
                             <Modal.Title>{editingIndex !== null ? 'Edit Task' : 'Add New Task'}</Modal.Title>
@@ -678,7 +535,6 @@ function TodoList({ userId }) {
                         </Modal.Footer>
                     </Modal>
 
-                    {/* Delete Confirmation Modal */}
                     <Modal show={showDeleteModal} onHide={handleCloseDeleteModal}>
                         <Modal.Header closeButton>
                             <Modal.Title>Confirm Deletion</Modal.Title>
@@ -707,4 +563,3 @@ function TodoList({ userId }) {
 }
 
 export default TodoList;
-
