@@ -135,7 +135,17 @@ function TopicsList({ userId }) {
           <button className="btn btn-primary d-flex align-items-center" onClick={() => setShowModal(true)}>
             <i className="bi bi-plus-circle me-2"></i> Create Topic
           </button>
-          <button className="btn btn-outline-secondary d-flex align-items-center" onClick={() => setShowFilterModal(true)}>
+          <button 
+            className="btn btn-outline-secondary d-flex align-items-center" 
+            onClick={() => {
+              setTempTechnicalFilter(technicalFilter);
+              setTempFromDate(fromDate || '');
+              setTempToDate(toDate || '');
+              setTempUserFilter(userFilter);
+              setTempSortOrder(sortOrder);
+              setShowFilterModal(true);
+            }}
+          >
             <i className="bi bi-funnel me-2"></i> Filter
           </button>
         </div>
@@ -314,7 +324,7 @@ function TopicsList({ userId }) {
                 </select>
 
                 <h6 className="mt-4">Sort Order</h6>
-                <div className="form-check px-4.8">
+                <div className="form-check px-4">
                   <input
                     className="form-check-input"
                     type="radio"
