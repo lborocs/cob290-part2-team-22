@@ -599,7 +599,7 @@ function TopicView({ userId }) {
     <div className="mt-2">
       {topic ? (
         <div className="mb-4">
-          <div className="d-flex justify-content-between align-items-start">
+          <div className="d-flex justify-content-between align-items-start mb-3">
             <div>
               <h2 className="h4 mb-2">{topic.title}</h2>
               <p className="text-muted mb-0">{topic.description}</p>
