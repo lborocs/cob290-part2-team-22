@@ -139,12 +139,35 @@ function TodoList({ userId }) {
         }
     };
     
-    const toggleTodo = (index) => {
-        const newTodos = [...todos];
-        newTodos[index].completed = !newTodos[index].completed;
-        newTodos[index].status = newTodos[index].completed ? 'completed' : 'pending';
-        setTodos(newTodos);
+
+
+
+
+
+    const toggleTodo = async (index) => {
+        const updatedTodo = { ...todos[index] };
+        updatedTodo.status = updatedTodo.status === 'Completed' ? 'Pending' : 'Completed';
+        
+        try {
+            await fetch('http://35.214.101.36/ToDoList.php', {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    todo_id: updatedTodo.todo_id,
+                    status: updatedTodo.status
+                })
+            });
+            fetchTodos(); // Refresh the task list
+        } catch (error) {
+            console.error('Error updating task status:', error);
+        }
     };
+    // const toggleTodo = (index) => {
+    //     const newTodos = [...todos];
+    //     newTodos[index].completed = !newTodos[index].completed;
+    //     newTodos[index].status = newTodos[index].completed ? 'completed' : 'pending';
+    //     setTodos(newTodos);
+    // };
 
     const confirmDelete = async () => {
         if (deleteIndex !== null) {
@@ -225,122 +248,250 @@ function TodoList({ userId }) {
         }));
     };
 
+
+
+
+    
+
+    // return (
+    //     <Container className="mt-5">
+    //     <Row className="justify-content-md-center">
+    //         <Col md={8}>
+    //             <div className="d-flex justify-content-between align-items-center mb-4">
+    //                 <h1>To-do List</h1>
+    //                 <div>
+    //                     <Button 
+    //                         variant="outline-secondary" 
+    //                         className="me-2"
+    //                         onClick={() => setShowCharts(!showCharts)}
+    //                     >
+    //                     {showCharts ? 'List View' : 'Charts View'}
+    //                     </Button>
+    //                     <Button 
+    //                         variant="outline-secondary" 
+    //                         className="me-2"
+    //                         onClick={() => setShowBinModal(true)}
+    //                     >
+    //                         🗑️ Bin ({deletedTodos.length})
+    //                     </Button>
+    //                     <Button variant="primary" onClick={() => handleShow()}>
+    //                         Add New Task
+    //                     </Button>
+    //                 </div>
+    //             </div>
+
+    //             {showCharts ? (
+    //                 <TodoProgressCharts userId={userId} />
+    //             ) : (
+    //               <>
+
+    //             {/* Filters */}
+    //             <div className="mb-4 d-flex gap-3">
+    //                 <Dropdown>
+    //                     <Dropdown.Toggle variant="outline-secondary">
+    //                         Priority: {filters.priority === 'all' ? 'All' : filters.priority}
+    //                     </Dropdown.Toggle>
+    //                     <Dropdown.Menu>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'all')}>All</Dropdown.Item>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'low')}>Low</Dropdown.Item>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'medium')}>Medium</Dropdown.Item>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('priority', 'high')}>High</Dropdown.Item>
+    //                     </Dropdown.Menu>
+    //                 </Dropdown>
+
+    //                 <Dropdown>
+    //                     <Dropdown.Toggle variant="outline-secondary">
+    //                         Status: {filters.status === 'all' ? 'All' : filters.status}
+    //                     </Dropdown.Toggle>
+    //                     <Dropdown.Menu>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'all')}>All</Dropdown.Item>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'pending')}>Pending</Dropdown.Item>
+    //                         <Dropdown.Item onClick={() => handleFilterChange('status', 'completed')}>Completed</Dropdown.Item>
+    //                     </Dropdown.Menu>
+    //                 </Dropdown>
+    //             </div>
+
+    //             <ListGroup>
+    //                 {filteredTodos.map((todo, index) => (
+    //                     <ListGroup.Item 
+    //                         key={index} 
+    //                         className="d-flex justify-content-between align-items-start py-3"
+    //                     >
+    //                         <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
+    //                             <div className="d-flex align-items-center">
+    //                                 <span 
+    //                                     style={{ 
+    //                                         textDecoration: todo.completed ? 'line-through' : 'none',
+    //                                         cursor: 'pointer',
+    //                                         marginRight: '10px'
+    //                                     }}
+    //                                     onClick={() => toggleTodo(index)}
+    //                                 >
+    //                                     <h5 className="mb-1">{todo.name}</h5>
+    //                                 </span>
+    //                                 <Badge 
+    //                                     bg={getPriorityBadgeVariant(todo.priority)}
+    //                                     className="me-2"
+    //                                 >
+    //                                     {todo.priority}
+    //                                 </Badge>
+    //                                 <Badge 
+    //                                     bg={todo.status === 'completed' ? 'success' : 'secondary'}
+    //                                 >
+    //                                     {todo.status}
+    //                                 </Badge>
+    //                             </div>
+    //                             <p className="mb-1 text-muted">{todo.description}</p>
+    //                             <small className="text-muted">
+    //                                 Due Date: {todo.dueDate || 'No due date'}
+    //                             </small>
+    //                         </div>
+    //                         <ButtonGroup>
+    //                             <Button 
+    //                                 variant="outline-primary" 
+    //                                 size="sm" 
+    //                                 onClick={() => handleShow(index)}
+    //                                 className="me-2"
+    //                             >
+    //                                 Edit
+    //                             </Button>
+    //                             <Button 
+    //                                 variant="outline-danger" 
+    //                                 size="sm" 
+    //                                 onClick={() => handleShowDeleteModal(index)}
+    //                             >
+    //                                 Delete
+    //                             </Button>
+    //                         </ButtonGroup>
+    //                     </ListGroup.Item>
+    //                 ))}
+    //             </ListGroup>
+    //             </>
+    //             )}
+
     return (
         <Container className="mt-5">
-        <Row className="justify-content-md-center">
-            <Col md={8}>
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                    <h1>To-do List</h1>
-                    <div>
-                        <Button 
-                            variant="outline-secondary" 
-                            className="me-2"
-                            onClick={() => setShowCharts(!showCharts)}
-                        >
-                        {showCharts ? 'List View' : 'Charts View'}
-                        </Button>
-                        <Button 
-                            variant="outline-secondary" 
-                            className="me-2"
-                            onClick={() => setShowBinModal(true)}
-                        >
-                            🗑️ Bin ({deletedTodos.length})
-                        </Button>
-                        <Button variant="primary" onClick={() => handleShow()}>
-                            Add New Task
-                        </Button>
+            <Row className="justify-content-md-center">
+                <Col md={10}>
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                        <h1 className="display-4">To-do List</h1>
+                        <div>
+                            <Button 
+                                variant="outline-primary" 
+                                className="me-2"
+                                onClick={() => setShowCharts(!showCharts)}
+                            >
+                                {showCharts ? 'List View' : 'Charts View'}
+                            </Button>
+                            <Button 
+                                variant="outline-secondary" 
+                                className="me-2"
+                                onClick={() => setShowBinModal(true)}
+                            >
+                                🗑️ Bin ({deletedTodos.length})
+                            </Button>
+                            <Button variant="primary" onClick={() => handleShow()}>
+                                Add New Task
+                            </Button>
+                        </div>
                     </div>
-                </div>
 
-                {showCharts ? (
-                    <TodoProgressCharts userId={userId} />
-                ) : (
-                  <>
+                    {showCharts ? (
+                        <TodoProgressCharts userId={userId} />
+                    ) : (
+                        <>
+                            {/* Filters */}
+                            <div className="mb-4 d-flex gap-3">
+                                <Dropdown>
+                                    <Dropdown.Toggle variant="outline-primary">
+                                        Priority: {filters.priority === 'all' ? 'All' : filters.priority}
+                                    </Dropdown.Toggle>
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item onClick={() => handleFilterChange('priority', 'all')}>All</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleFilterChange('priority', 'low')}>Low</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleFilterChange('priority', 'medium')}>Medium</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleFilterChange('priority', 'high')}>High</Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
 
-                {/* Filters */}
-                <div className="mb-4 d-flex gap-3">
-                    <Dropdown>
-                        <Dropdown.Toggle variant="outline-secondary">
-                            Priority: {filters.priority === 'all' ? 'All' : filters.priority}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => handleFilterChange('priority', 'all')}>All</Dropdown.Item>
-                            <Dropdown.Item onClick={() => handleFilterChange('priority', 'low')}>Low</Dropdown.Item>
-                            <Dropdown.Item onClick={() => handleFilterChange('priority', 'medium')}>Medium</Dropdown.Item>
-                            <Dropdown.Item onClick={() => handleFilterChange('priority', 'high')}>High</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-
-                    <Dropdown>
-                        <Dropdown.Toggle variant="outline-secondary">
-                            Status: {filters.status === 'all' ? 'All' : filters.status}
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item onClick={() => handleFilterChange('status', 'all')}>All</Dropdown.Item>
-                            <Dropdown.Item onClick={() => handleFilterChange('status', 'pending')}>Pending</Dropdown.Item>
-                            <Dropdown.Item onClick={() => handleFilterChange('status', 'completed')}>Completed</Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
-                </div>
-
-                <ListGroup>
-                    {filteredTodos.map((todo, index) => (
-                        <ListGroup.Item 
-                            key={index} 
-                            className="d-flex justify-content-between align-items-start py-3"
-                        >
-                            <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
-                                <div className="d-flex align-items-center">
-                                    <span 
-                                        style={{ 
-                                            textDecoration: todo.completed ? 'line-through' : 'none',
-                                            cursor: 'pointer',
-                                            marginRight: '10px'
-                                        }}
-                                        onClick={() => toggleTodo(index)}
-                                    >
-                                        <h5 className="mb-1">{todo.name}</h5>
-                                    </span>
-                                    <Badge 
-                                        bg={getPriorityBadgeVariant(todo.priority)}
-                                        className="me-2"
-                                    >
-                                        {todo.priority}
-                                    </Badge>
-                                    <Badge 
-                                        bg={todo.status === 'completed' ? 'success' : 'secondary'}
-                                    >
-                                        {todo.status}
-                                    </Badge>
-                                </div>
-                                <p className="mb-1 text-muted">{todo.description}</p>
-                                <small className="text-muted">
-                                    Due Date: {todo.dueDate || 'No due date'}
-                                </small>
+                                <Dropdown>
+                                    <Dropdown.Toggle variant="outline-primary">
+                                        Status: {filters.status === 'all' ? 'All' : filters.status}
+                                    </Dropdown.Toggle>
+                                    <Dropdown.Menu>
+                                        <Dropdown.Item onClick={() => handleFilterChange('status', 'all')}>All</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleFilterChange('status', 'pending')}>Pending</Dropdown.Item>
+                                        <Dropdown.Item onClick={() => handleFilterChange('status', 'completed')}>Completed</Dropdown.Item>
+                                    </Dropdown.Menu>
+                                </Dropdown>
                             </div>
-                            <ButtonGroup>
-                                <Button 
-                                    variant="outline-primary" 
-                                    size="sm" 
-                                    onClick={() => handleShow(index)}
-                                    className="me-2"
-                                >
-                                    Edit
-                                </Button>
-                                <Button 
-                                    variant="outline-danger" 
-                                    size="sm" 
-                                    onClick={() => handleShowDeleteModal(index)}
-                                >
-                                    Delete
-                                </Button>
-                            </ButtonGroup>
-                        </ListGroup.Item>
-                    ))}
-                </ListGroup>
-                </>
-                )}
 
+                            <ListGroup>
+                                {filteredTodos.map((todo, index) => (
+                                    <ListGroup.Item 
+                                        key={index} 
+                                        className="d-flex justify-content-between align-items-start py-3 border-left border-3"
+                                        style={{
+                                            borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
+                                                            todo.priority === 'medium' ? '#ffc107' : '#17a2b8'
+                                        }}
+                                    >
+                                        <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
+                                            <div className="d-flex align-items-center">
+                                                <Form.Check 
+                                                    type="checkbox"
+                                                    checked={todo.status === 'Completed'}
+                                                    onChange={() => toggleTodo(index)}
+                                                    className="me-2"
+                                                />
+                                                <h5 className={`mb-1 ${todo.status === 'Completed' ? 'text-muted text-decoration-line-through' : ''}`}>
+                                                    {todo.name}
+                                                </h5>
+                                                <Badge 
+                                                    bg={getPriorityBadgeVariant(todo.priority)}
+                                                    className="ms-2"
+                                                >
+                                                    {todo.priority}
+                                                </Badge>
+                                                <Badge 
+                                                    bg={todo.status === 'Completed' ? 'success' : 'secondary'}
+                                                    className="ms-2"
+                                                >
+                                                    {todo.status}
+                                                </Badge>
+                                            </div>
+                                            <p className="mb-1 text-muted">{todo.description}</p>
+                                            <small className="text-muted">
+                                                Due Date: {todo.dueDate || 'No due date'}
+                                            </small>
+                                        </div>
+                                        <ButtonGroup>
+                                            <Button 
+                                                variant="outline-primary" 
+                                                size="sm" 
+                                                onClick={() => handleShow(index)}
+                                                className="me-2"
+                                            >
+                                                Edit
+                                            </Button>
+                                            <Button 
+                                                variant="outline-danger" 
+                                                size="sm" 
+                                                onClick={() => handleShowDeleteModal(index)}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </ButtonGroup>
+                                    </ListGroup.Item>
+                                ))}
+                            </ListGroup>
+                        </>
+                    )}
+
+
+
+
+                    
 
                 <Modal 
                         show={showBinModal} 
