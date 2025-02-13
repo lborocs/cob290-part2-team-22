@@ -210,7 +210,7 @@ return (
              {/* Profile Dropdown */}
              <Nav className="ms-auto">
               <NavDropdown
-                title={`Employee: ${name}`}
+                title={`${name}`}
                 align="end"
                 className="profile-dropdown"
                 show={dropdownOpen}
