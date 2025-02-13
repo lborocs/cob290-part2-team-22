@@ -20,6 +20,15 @@ function EmpForum({ userId }) {
 
 
 function TopicsList({ userId }) {
+  const [searchQuery, setSearchQuery] = React.useState('');
+
+  const [sortOrder, setSortOrder] = React.useState('newest');
+  const [tempSortOrder, setTempSortOrder] = React.useState('newest');
+
+  const [users, setUsers] = React.useState([]);
+  const [userFilter, setUserFilter] = React.useState(null);
+  const [tempUserFilter, setTempUserFilter] = React.useState(null);
+
   const [fromDate, setFromDate] = React.useState(null);
   const [toDate, setToDate] = React.useState(null);
   const [tempFromDate, setTempFromDate] = React.useState('');
@@ -42,8 +51,13 @@ function TopicsList({ userId }) {
   const [topicToDelete, setTopicToDelete] = React.useState(null);
 
   React.useEffect(() => {
+    fetch('http://35.214.101.36/Forum.php?process=getUsers') 
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error('Error fetching users:', err));
+    
     fetchTopics();
-  }, [technicalFilter, fromDate, toDate]);
+  }, [technicalFilter, fromDate, toDate, userFilter, sortOrder, searchQuery]);
 
   const fetchTopics = () => {
     let url = 'http://35.214.101.36/Forum.php?process=getTopics';
@@ -52,6 +66,9 @@ function TopicsList({ userId }) {
     if (technicalFilter !== null) params.push(`technical_filter=${technicalFilter}`);
     if (fromDate) params.push(`from_date=${fromDate}`);
     if (toDate) params.push(`to_date=${toDate}`);
+    if (userFilter) params.push(`user_filter=${userFilter}`);
+    if (sortOrder) params.push(`sort_order=${sortOrder}`);
+    if (searchQuery) params.push(`search_query=${encodeURIComponent(searchQuery)}`);
     
     if (params.length > 0) {
       url += '&' + params.join('&');
@@ -111,133 +128,105 @@ function TopicsList({ userId }) {
   };
 
   return (
-    <div className="mt-4">
-      <h2 className="mb-4">Topics</h2>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <i className="bi bi-folder-plus"></i> Create Topic
-        </button>
-        <button 
-          className="btn btn-secondary" 
-          onClick={() => { 
-            setTempTechnicalFilter(technicalFilter); 
-            setShowFilterModal(true); 
-          }}
-        >
-          <i className="bi bi-funnel"></i> Filter
-        </button>
+    <div className="mt-2">
+      <div className="d-flex justify-content-between align-items-center mb-4">
+        <h2 className="h4 mb-0">Topics</h2>
+        <div className="d-flex gap-2">
+          <button className="btn btn-primary d-flex align-items-center" onClick={() => setShowModal(true)}>
+            <i className="bi bi-plus-circle me-2"></i> Create Topic
+          </button>
+          <button 
+            className="btn btn-outline-secondary d-flex align-items-center" 
+            onClick={() => {
+              setTempTechnicalFilter(technicalFilter);
+              setTempFromDate(fromDate || '');
+              setTempToDate(toDate || '');
+              setTempUserFilter(userFilter);
+              setTempSortOrder(sortOrder);
+              setShowFilterModal(true);
+            }}
+          >
+            <i className="bi bi-funnel me-2"></i> Filter
+          </button>
+        </div>
       </div>
+
+      <div className="mb-4">
+        <div className="input-group">
+          <span className="input-group-text bg-white">
+            <i className="bi bi-search"></i>
+          </span>
+          <input
+            type="text"
+            className="form-control border-start-0"
+            placeholder="Search topics by title or description..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
       {topics.length === 0 ? (
-        <div className="alert alert-info">No topics yet. Create one to get started!</div>
+        <div className="text-center py-5">
+          <i className="bi bi-chat-square-text display-1 text-muted mb-3"></i>
+          <p className="lead text-muted">No topics yet. Create one to get started!</p>
+        </div>
       ) : (
-        <ul className="list-group">
+        <div className="row g-4">
           {topics.map(topic => {
             const isTechnical = Number(topic.technical) === 1;
-            const isOwner = Number(topic.created_by) === userId;
+            const isOwner = Number(topic.created_by) === Number(userId);
             return (
-              <li key={topic.topic_id} className="list-group-item d-flex justify-content-between align-items-start">
-                <div className="flex-grow-1">
-                  <Link to={`topic/${topic.topic_id}`} className="text-decoration-none">
-                    <h5 className="mb-1">
-                      <i className="bi bi-chat-left-text"></i> {topic.title}
-                    </h5>
-                  </Link>
-                  <div className="mb-1">
-                    <strong><i className="bi bi-card-text"></i> Description:</strong> {topic.description}
-                  </div>
-                  <div className="mb-1">
-                    <strong><i className="bi bi-person-fill"></i> Created By:</strong> {topic.creator_name}
-                  </div>
-                  <div className="mb-1">
-                    <strong><i className="bi bi-clock"></i> Created On:</strong> {new Date(topic.date_time).toLocaleString()}
-                  </div>
-                  <div>
-                    <strong><i className="bi bi-gear-fill"></i> Type:</strong> {isTechnical ? 'Technical' : 'Non-Technical'}
+              <div key={topic.topic_id} className="col-12">
+                <div className="card h-100 border-0 shadow-sm">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between">
+                      <h3 className="h5 mb-3">
+                        <Link to={`topic/${topic.topic_id}`} className="text-decoration-none text-dark">
+                          {topic.title}
+                        </Link>
+                      </h3>
+                      {isOwner && (
+                        <div className="dropdown">
+                          <button
+                            className="btn btn-light btn-sm"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                          >
+                            <i className="bi bi-three-dots"></i>
+                          </button>
+                          <ul className="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <button
+                                className="dropdown-item text-danger"
+                                onClick={() => { setShowDeleteModal(true); setTopicToDelete(topic); }}
+                              >
+                                <i className="bi bi-trash me-2"></i> Delete
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    <p className="text-muted mb-3">{topic.description}</p>
+                    <div className="d-flex flex-wrap gap-3 align-items-center">
+                      <span className="badge bg-light text-dark border">
+                        <i className="bi bi-person me-1"></i>
+                        {topic.creator_name}
+                      </span>
+                      <span className="badge bg-light text-dark border">
+                        <i className="bi bi-clock me-1"></i>
+                        {new Date(topic.date_time).toLocaleDateString()}
+                      </span>
+                      <span className={`badge ${isTechnical ? 'bg-info' : 'bg-secondary'}`}>
+                        {isTechnical ? 'Technical' : 'Non-Technical'}
+                      </span>
+                    </div>
                   </div>
                 </div>
-                {isOwner && (
-                  <div className="dropdown ms-3">
-                    <button
-                      className="btn btn-light border dropdown-toggle"
-                      type="button"
-                      id={`topicMenu${topic.topic_id}`}
-                      data-bs-toggle="dropdown"
-                      aria-expanded="false"
-                    >
-                      <i className="bi bi-three-dots"></i>
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`topicMenu${topic.topic_id}`}>
-                      <li>
-                        <button
-                          className="dropdown-item d-flex align-items-center gap-2"
-                          onClick={() => { setShowDeleteModal(true); setTopicToDelete(topic); }}
-                        >
-                          <i className="bi bi-trash"></i> Delete
-                        </button>
-                      </li>
-                      {/* Add more options (like Edit) here if desired */}
-                    </ul>
-                  </div>
-                )}
-              </li>
+              </div>
             );
           })}
-        </ul>
-      )}
-
-      {/* Create Topic Modal */}
-      {showModal && (
-        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
-              <form onSubmit={handleCreateTopic}>
-                <div className="modal-header">
-                  <h5 className="modal-title">Create New Topic</h5>
-                  <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
-                </div>
-                <div className="modal-body">
-                  <div className="form-group mb-3">
-                    <label>Title</label>
-                    <input 
-                      type="text"
-                      className="form-control mt-2"
-                      value={newTopic.title}
-                      onChange={(e) => setNewTopic({...newTopic, title: e.target.value})}
-                      placeholder="Enter topic title"
-                      required
-                    />
-                  </div>
-                  <div className="form-group mb-3">
-                    <label>Description</label>
-                    <textarea 
-                      className="form-control mt-2"
-                      value={newTopic.description}
-                      onChange={(e) => setNewTopic({...newTopic, description: e.target.value})}
-                      placeholder="Describe the topic..."
-                      rows="4"
-                      required
-                    />
-                  </div>
-                  <div className="form-check mb-3">
-                    <input 
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={newTopic.technical}
-                      onChange={(e) => setNewTopic({...newTopic, technical: e.target.checked})}
-                      id="technicalCheck"
-                    />
-                    <label className="form-check-label" htmlFor="technicalCheck">
-                      Technical Topic
-                    </label>
-                  </div>
-                </div>
-                <div className="modal-footer">
-                  <button type="submit" className="btn btn-primary">Create</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
-                </div>
-              </form>
-            </div>
-          </div>
         </div>
       )}
 
@@ -250,7 +239,8 @@ function TopicsList({ userId }) {
                 <h5 className="modal-title">Filter Topics</h5>
                 <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
               </div>
-              <div className="modal-body">
+              <h6 className="mt-2 mb-0 px-3">Topic Type</h6>
+              <div className="modal-body px-3">
                 <div className="form-check">
                   <input
                     className="form-check-input"
@@ -292,10 +282,10 @@ function TopicsList({ userId }) {
                 </div>
               </div>
 
-              <div className="mb-4">
+              <div className="mb-4 px-3">
                 <h6>Date Range</h6>
                 <div className="row g-3">
-                  <div className="col-md-6">
+                  <div className="col-md-6 px-3">
                     <label htmlFor="fromDate" className="form-label">From Date</label>
                     <input 
                       type="date" 
@@ -305,7 +295,7 @@ function TopicsList({ userId }) {
                       onChange={(e) => setTempFromDate(e.target.value)}
                     />
                   </div>
-                  <div className="col-md-6">
+                  <div className="col-md-6 px-3">
                     <label htmlFor="toDate" className="form-label">To Date</label>
                     <input 
                       type="date" 
@@ -316,6 +306,50 @@ function TopicsList({ userId }) {
                     />
                   </div>
                 </div>
+              
+
+                <h6 className="mt-4">Author</h6>
+                <select 
+                  className="form-select"
+                  id="userFilter"
+                  value={tempUserFilter || ''}
+                  onChange={(e) => setTempUserFilter(e.target.value || null)}
+                >
+                  <option value="">Any User</option>
+                  {users.map(user => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.name} ({user.job_title})
+                    </option>
+                  ))}
+                </select>
+
+                <h6 className="mt-4">Sort Order</h6>
+                <div className="form-check px-4">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="sortOrder"
+                    id="sortNewest"
+                    checked={tempSortOrder === 'newest'}
+                    onChange={() => setTempSortOrder('newest')}
+                  />
+                  <label className="form-check-label" htmlFor="sortNewest">
+                    Newest First
+                  </label>
+                </div>
+                <div className="form-check px-4">
+                  <input
+                    className="form-check-input"
+                    type="radio"
+                    name="sortOrder"
+                    id="sortOldest"
+                    checked={tempSortOrder === 'oldest'}
+                    onChange={() => setTempSortOrder('oldest')}
+                  />
+                  <label className="form-check-label" htmlFor="sortOldest">
+                    Oldest First
+                  </label>
+                </div>
               </div>
 
               <div className="modal-footer">
@@ -325,6 +359,8 @@ function TopicsList({ userId }) {
                   setTechnicalFilter(tempTechnicalFilter);
                   setFromDate(tempFromDate || null);
                   setToDate(tempToDate || null);
+                  setUserFilter(tempUserFilter);
+                  setSortOrder(tempSortOrder);
                   setShowFilterModal(false); 
                 }}
               >
@@ -337,33 +373,89 @@ function TopicsList({ userId }) {
         </div>
       )}
 
-      {/* Delete Topic Confirmation Modal */}
-      {showDeleteModal && topicToDelete && (
-        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
+      {showModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
-                <h5 className="modal-title">Confirm Deletion</h5>
+            <div className="modal-content border-0 shadow">
+              <form onSubmit={handleCreateTopic}>
+                <div className="modal-header border-bottom-0">
+                  <h5 className="modal-title">Create New Topic</h5>
+                  <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
+                </div>
+                <div className="modal-body">
+                  <div className="mb-3">
+                    <label className="form-label">Title</label>
+                    <input 
+                      type="text"
+                      className="form-control"
+                      value={newTopic.title}
+                      onChange={(e) => setNewTopic({...newTopic, title: e.target.value})}
+                      placeholder="Enter topic title"
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Description</label>
+                    <textarea 
+                      className="form-control"
+                      value={newTopic.description}
+                      onChange={(e) => setNewTopic({...newTopic, description: e.target.value})}
+                      placeholder="Describe the topic..."
+                      rows="4"
+                      required
+                    />
+                  </div>
+                  <div className="form-check">
+                    <input 
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={newTopic.technical}
+                      onChange={(e) => setNewTopic({...newTopic, technical: e.target.checked})}
+                      id="technicalCheck"
+                    />
+                    <label className="form-check-label" htmlFor="technicalCheck">
+                      Technical Topic
+                    </label>
+                  </div>
+                </div>
+                <div className="modal-footer border-top-0">
+                  <button type="button" className="btn btn-light" onClick={() => setShowModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Create Topic</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDeleteModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-bottom-0">
+                <h5 className="modal-title">Delete Topic</h5>
                 <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)}></button>
               </div>
               <div className="modal-body">
-                <p>Are you sure you want to delete the topic "<strong>{topicToDelete.title}</strong>"?</p>
+                <p>Are you sure you want to delete this topic? This action cannot be undone.</p>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-danger" onClick={handleDeleteTopic}>Yes, Delete</button>
-                <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <div className="modal-footer border-top-0">
+                <button type="button" className="btn btn-light" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-danger" onClick={handleDeleteTopic}>Delete</button>
               </div>
             </div>
           </div>
         </div>
       )}
     </div>
+
   );
 }
 
 function TopicView({ userId }) {
   const { id } = useParams();
   const [posts, setPosts] = React.useState([]);
+  const [topic, setTopic] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [newPostContent, setNewPostContent] = React.useState('');
 
@@ -376,22 +468,61 @@ function TopicView({ userId }) {
   const [postToEdit, setPostToEdit] = React.useState(null);
   const [editPostContent, setEditPostContent] = React.useState('');
 
-  React.useEffect(() => {
-    fetchPosts(id);
-  }, [id]);
-  
+  const [searchPostQuery, setSearchPostQuery] = React.useState('');
 
-  const fetchPosts = (id) => {
-    fetch(`http://35.214.101.36/Forum.php?process=getPosts&topic_id=${id}`)
+  const [users, setUsers] = React.useState([]);
+  const [userFilter, setUserFilter] = React.useState(null);
+  const [tempUserFilter, setTempUserFilter] = React.useState(null);
+
+  const [fromDate, setFromDate] = React.useState(null);
+  const [toDate, setToDate] = React.useState(null);
+  const [tempFromDate, setTempFromDate] = React.useState('');
+  const [tempToDate, setTempToDate] = React.useState('');
+
+  const [sortOrder, setSortOrder] = React.useState('newest');
+  const [tempSortOrder, setTempSortOrder] = React.useState('newest');
+
+  const [showFilterModal, setShowFilterModal] = React.useState(false);
+
+  React.useEffect(() => {
+    // Fetch users for filter dropdown
+    fetch('http://35.214.101.36/Forum.php?process=getUsers')
+      .then(res => res.json())
+      .then(data => setUsers(data))
+      .catch(err => console.error('Error fetching users:', err));
+    
+    fetchTopic(id);
+    fetchPosts(id);
+  }, [id, searchPostQuery, fromDate, toDate, userFilter, sortOrder]);
+  
+  const fetchTopic = (topicId) => {
+    fetch(`http://35.214.101.36/Forum.php?process=getTopics&topic_id=${topicId}`)
       .then(res => res.json())
       .then(data => {
-        console.log(data); // Debugging step to check the response
-        setPosts(data);
+        if (data.length > 0) setTopic(data[0]);
       })
+      .catch(err => console.error('Error fetching topic:', err));
+  };
+
+  const fetchPosts = (topicId) => {
+    let url = `http://35.214.101.36/Forum.php?process=getPosts&topic_id=${topicId}`;
+    
+    const params = [];
+    if (searchPostQuery) params.push(`search_post_query=${encodeURIComponent(searchPostQuery)}`);
+    if (fromDate) params.push(`from_date=${fromDate}`);
+    if (toDate) params.push(`to_date=${toDate}`);
+    if (userFilter) params.push(`user_filter=${userFilter}`);
+    if (sortOrder) params.push(`sort_order=${sortOrder}`);
+    
+    if (params.length > 0) {
+      url += '&' + params.join('&');
+    }
+
+    fetch(url)
+      .then(res => res.json())
+      .then(data => setPosts(data))
       .catch(err => console.error('Error fetching posts:', err));
   };
-  
-  
 
   const handleCreatePost = (e) => {
     e.preventDefault();
@@ -465,92 +596,159 @@ function TopicView({ userId }) {
   };
 
   return (
-    <div className="mt-4">
-      <h2 className="mb-4">Topic Posts</h2>
-      <div className="d-flex justify-content-between align-items-center mb-3">
-        <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-          <i className="bi bi-plus-circle"></i> Create Post
-        </button>
-        <Link to=".." className="btn btn-secondary">
-          <i className="bi bi-arrow-left"></i> Back to Topics
-        </Link>
-      </div>
-      {posts.length === 0 ? (
-        <div className="alert alert-info">No posts yet. Be the first to create one!</div>
+    <div className="mt-2">
+      {topic ? (
+        <div className="mb-4">
+          <div className="d-flex justify-content-between align-items-start mb-3">
+            <div>
+              <h2 className="h4 mb-2">{topic.title}</h2>
+              <p className="text-muted mb-0">{topic.description}</p>
+            </div>
+          </div>
+          
+          {/* Modified button container */}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <Link to=".." className="btn btn-outline-secondary">
+              <i className="bi bi-arrow-left me-2"></i>Back to Topics
+            </Link>
+            
+            <div className="d-flex gap-2">
+              <button 
+                className="btn btn-primary d-flex align-items-center" 
+                onClick={() => setShowModal(true)}
+              >
+                <i className="bi bi-plus-circle me-2"></i> Create Post
+              </button>
+              <button 
+                className="btn btn-outline-secondary d-flex align-items-center"
+                onClick={() => setShowFilterModal(true)}
+              >
+                <i className="bi bi-funnel me-2"></i> Filter
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
-        <ul className="list-group">
+        <div className="text-center py-4">
+          <div className="spinner-border text-primary" role="status">
+            <span className="visually-hidden">Loading...</span>
+          </div>
+        </div>
+      )}
+    
+
+      <div className="mb-4">
+        <div className="input-group">
+          <span className="input-group-text bg-white">
+            <i className="bi bi-search"></i>
+          </span>
+          <input
+            type="text"
+            className="form-control border-start-0"
+            placeholder="Search posts by content..."
+            value={searchPostQuery}
+            onChange={(e) => setSearchPostQuery(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {posts.length === 0 ? (
+        <div className="text-center py-5">
+          <i className="bi bi-chat-text display-1 text-muted mb-3"></i>
+          <p className="lead text-muted">No posts yet. Be the first to create one!</p>
+        </div>
+      ) : (
+        <div className="row g-4">
           {posts.map(post => {
-            const isOwner = Number(post.user_id) === userId;
+            const isOwner = Number(post.user_id) === Number(userId);
             return (
-              <li key={post.post_id} className="list-group-item d-flex justify-content-between align-items-center">
-                <div className="me-3">
-                  <div>
-                    <strong><i className="bi bi-person-fill"></i>Created By:</strong> {post.user_name} (User ID: {post.user_id})
-                  </div>
-                  <div className="mt-2">
-                    <strong><i className="bi bi-clock"></i> Created On:</strong> {new Date(post.date_time).toLocaleString()}
-                  </div>
-                  <div className="mt-2">
-                    <i className="bi bi-chat-text-fill"></i> {post.content}
+              <div key={post.post_id} className="col-12">
+                <div className="card border-0 shadow-sm">
+                  <div className="card-body">
+                    <div className="d-flex justify-content-between mb-3">
+                      <div className="d-flex align-items-center">
+                        <div className="bg-light rounded-circle p-2 me-2">
+                          <i className="bi bi-person"></i>
+                        </div>
+                        <div>
+                          <h6 className="mb-0">{post.user_name}</h6>
+                          <small className="text-muted">
+                            {new Date(post.date_time).toLocaleString()}
+                          </small>
+                        </div>
+                      </div>
+                      {isOwner && (
+                        <div className="dropdown">
+                          <button 
+                            className="btn btn-light btn-sm"
+                            type="button"
+                            data-bs-toggle="dropdown"
+                          >
+                            <i className="bi bi-three-dots"></i>
+                          </button>
+                          <ul className="dropdown-menu dropdown-menu-end">
+                            <li>
+                              <button 
+                                className="dropdown-item"
+                                onClick={() => { 
+                                  setShowEditModal(true); 
+                                  setPostToEdit(post); 
+                                  setEditPostContent(post.content); 
+                                }}
+                              >
+                                <i className="bi bi-pencil me-2"></i> Edit
+                              </button>
+                            </li>
+                            <li>
+                              <button 
+                                className="dropdown-item text-danger"
+                                onClick={() => { 
+                                  setShowDeleteModal(true); 
+                                  setPostToDelete(post); 
+                                }}
+                              >
+                                <i className="bi bi-trash me-2"></i> Delete
+                              </button>
+                            </li>
+                          </ul>
+                        </div>
+                      )}
+                    </div>
+                    <p className="mb-0">{post.content}</p>
                   </div>
                 </div>
-                {isOwner && (
-                  <div className="dropdown">
-                    <button 
-                      className="btn btn-light border dropdown-toggle" 
-                      type="button" 
-                      id={`postMenu${post.post_id}`} 
-                      data-bs-toggle="dropdown" 
-                      aria-expanded="false"
-                    >
-                      <i className="bi bi-three-dots"></i>
-                    </button>
-                    <ul className="dropdown-menu dropdown-menu-end" aria-labelledby={`postMenu${post.post_id}`}>
-                      <li>
-                        <button className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setShowEditModal(true); setPostToEdit(post); setEditPostContent(post.content); }}>
-                          <i className="bi bi-pencil-square"></i> Edit
-                        </button>
-                      </li>
-                      <li>
-                        <button className="dropdown-item d-flex align-items-center gap-2" onClick={() => { setShowDeleteModal(true); setPostToDelete(post); }}>
-                          <i className="bi bi-trash"></i> Delete
-                        </button>
-                      </li>
-                    </ul>
-                  </div>
-                )}
-              </li>
+              </div>
             );
           })}
-        </ul>
+        </div>
       )}
 
       {/* Create Post Modal */}
       {showModal && (
-        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
               <form onSubmit={handleCreatePost}>
-                <div className="modal-header">
+                <div className="modal-header border-bottom-0">
                   <h5 className="modal-title">Create New Post</h5>
                   <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                 </div>
                 <div className="modal-body">
-                  <div className="form-group">
-                    <label>Content</label>
-                    <textarea
-                      className="form-control mt-2"
+                  <div className="mb-3">
+                    <label className="form-label">Content</label>
+                    <textarea 
+                      className="form-control"
                       value={newPostContent}
                       onChange={(e) => setNewPostContent(e.target.value)}
-                      placeholder="Write your post content here..."
-                      rows="5"
+                      placeholder="Enter your post content..."
+                      rows="4"
                       required
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
-                  <button type="submit" className="btn btn-primary">Create</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowModal(false)}>Cancel</button>
+                <div className="modal-footer border-top-0">
+                  <button type="button" className="btn btn-light" onClick={() => setShowModal(false)}>Cancel</button>
+                  <button type="submit" className="btn btn-primary">Create Post</button>
                 </div>
               </form>
             </div>
@@ -559,21 +757,20 @@ function TopicView({ userId }) {
       )}
 
       {/* Delete Post Confirmation Modal */}
-      {showDeleteModal && postToDelete && (
-        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
+      {showDeleteModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header bg-danger text-white">
-                <h5 className="modal-title">Confirm Deletion</h5>
+            <div className="modal-content border-0 shadow">
+              <div className="modal-header border-bottom-0">
+                <h5 className="modal-title">Delete Post</h5>
                 <button type="button" className="btn-close" onClick={() => setShowDeleteModal(false)}></button>
               </div>
               <div className="modal-body">
-                <p>Are you sure you want to delete this post?</p>
-                <p className="text-muted"><em>{postToDelete.content}</em></p>
+                <p>Are you sure you want to delete this post? This action cannot be undone.</p>
               </div>
-              <div className="modal-footer">
-                <button className="btn btn-danger" onClick={handleDeletePost}>Yes, Delete</button>
-                <button className="btn btn-secondary" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+              <div className="modal-footer border-top-0">
+                <button type="button" className="btn btn-light" onClick={() => setShowDeleteModal(false)}>Cancel</button>
+                <button type="button" className="btn btn-danger" onClick={handleDeletePost}>Delete</button>
               </div>
             </div>
           </div>
@@ -581,32 +778,133 @@ function TopicView({ userId }) {
       )}
 
       {/* Edit Post Modal */}
-      {showEditModal && postToEdit && (
-        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
-          <div className="modal-dialog">
-            <div className="modal-content">
+      {showEditModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content border-0 shadow">
               <form onSubmit={handleEditPost}>
-                <div className="modal-header">
+                <div className="modal-header border-bottom-0">
                   <h5 className="modal-title">Edit Post</h5>
                   <button type="button" className="btn-close" onClick={() => setShowEditModal(false)}></button>
                 </div>
                 <div className="modal-body">
-                  <div className="form-group">
-                    <label>Content</label>
-                    <textarea
-                      className="form-control mt-2"
+                  <div className="mb-3">
+                    <label className="form-label">Content</label>
+                    <textarea 
+                      className="form-control"
                       value={editPostContent}
                       onChange={(e) => setEditPostContent(e.target.value)}
-                      rows="5"
+                      placeholder="Enter your post content..."
+                      rows="4"
                       required
                     />
                   </div>
                 </div>
-                <div className="modal-footer">
+                <div className="modal-footer border-top-0">
+                  <button type="button" className="btn btn-light" onClick={() => setShowEditModal(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary">Save Changes</button>
-                  <button type="button" className="btn btn-secondary" onClick={() => setShowEditModal(false)}>Cancel</button>
                 </div>
               </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Filter Modal */}
+      {showFilterModal && (
+        <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,.5)' }}>
+          <div className="modal-dialog">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">Filter Posts</h5>
+                <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
+              </div>
+              <div className="modal-body">
+                <div className="mb-4 px-3">
+                  <h6>Date Range</h6>
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label htmlFor="postFromDate" className="form-label">From Date</label>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        id="postFromDate"
+                        value={tempFromDate}
+                        onChange={(e) => setTempFromDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label htmlFor="postToDate" className="form-label">To Date</label>
+                      <input 
+                        type="date" 
+                        className="form-control" 
+                        id="postToDate"
+                        value={tempToDate}
+                        onChange={(e) => setTempToDate(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <h6 className="mt-4">Author</h6>
+                  <select 
+                    className="form-select"
+                    value={tempUserFilter || ''}
+                    onChange={(e) => setTempUserFilter(e.target.value || null)}
+                  >
+                    <option value="">Any User</option>
+                    {users.map(user => (
+                      <option key={user.user_id} value={user.user_id}>
+                        {user.name} ({user.job_title})
+                      </option>
+                    ))}
+                  </select>
+
+                  <h6 className="mt-4">Sort Order</h6>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="postSortOrder"
+                      id="postSortNewest"
+                      checked={tempSortOrder === 'newest'}
+                      onChange={() => setTempSortOrder('newest')}
+                    />
+                    <label className="form-check-label" htmlFor="postSortNewest">
+                      Newest First
+                    </label>
+                  </div>
+                  <div className="form-check">
+                    <input
+                      className="form-check-input"
+                      type="radio"
+                      name="postSortOrder"
+                      id="postSortOldest"
+                      checked={tempSortOrder === 'oldest'}
+                      onChange={() => setTempSortOrder('oldest')}
+                    />
+                    <label className="form-check-label" htmlFor="postSortOldest">
+                      Oldest First
+                    </label>
+                  </div>
+                </div>
+              </div>
+              <div className="modal-footer">
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => {
+                    setFromDate(tempFromDate || null);
+                    setToDate(tempToDate || null);
+                    setUserFilter(tempUserFilter);
+                    setSortOrder(tempSortOrder);
+                    setShowFilterModal(false);
+                  }}
+                >
+                  Apply Filter
+                </button>
+                <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>
+                  Cancel
+                </button>
+              </div>
             </div>
           </div>
         </div>

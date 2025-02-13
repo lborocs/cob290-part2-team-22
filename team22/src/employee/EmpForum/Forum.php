@@ -5,6 +5,9 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
+// 35.214.101.36
+// localhost/cob290-part2-team-22/team22/src/employee/EmpForum
+
 $host = 'localhost';
 $username = 'Team22'; 
 $password = 'p';   
@@ -79,17 +82,34 @@ function deleteTopic($mysqli) {
 // Function for getPosts
 function getPosts($mysqli) {
     $topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : 0;
-
-    if ($topic_id === 0) {
-        echo json_encode(["error" => "Invalid topic_id"]);
-        return;
-    }
+    $search_query = isset($_GET['search_post_query']) ? $mysqli->real_escape_string($_GET['search_post_query']) : '';
+    $from_date = isset($_GET['from_date']) ? $_GET['from_date'] : null;
+    $to_date = isset($_GET['to_date']) ? $_GET['to_date'] : null;
+    $user_filter = isset($_GET['user_filter']) ? (int)$_GET['user_filter'] : null;
+    $sort_order = isset($_GET['sort_order']) ? $_GET['sort_order'] : 'newest';
 
     $sql = "SELECT p.post_id, p.content, p.user_id, u.name AS user_name, p.date_time
             FROM Forum_Posts p
             JOIN Users u ON p.user_id = u.user_id
-            WHERE p.topic_id = $topic_id
-            ORDER BY p.post_id ASC";
+            WHERE p.topic_id = $topic_id";
+
+    if (!empty($search_query)) {
+        $sql .= " AND LOWER(p.content) LIKE LOWER('%$search_query%')";
+    }
+
+    if ($from_date) {
+        $sql .= " AND DATE(p.date_time) >= '" . $mysqli->real_escape_string($from_date) . "'";
+    }
+    if ($to_date) {
+        $sql .= " AND DATE(p.date_time) <= '" . $mysqli->real_escape_string($to_date) . "'";
+    }
+
+    if ($user_filter !== null && $user_filter > 0) {
+        $sql .= " AND p.user_id = " . $user_filter;
+    }
+
+    $order = ($sort_order === 'oldest') ? 'ASC' : 'DESC';
+    $sql .= " ORDER BY p.date_time $order";
 
     $result = $mysqli->query($sql);
     $posts = [];
@@ -107,25 +127,43 @@ function getTopics($mysqli) {
     $technical_filter = isset($_GET['technical_filter']) ? $_GET['technical_filter'] : null;
     $from_date = isset($_GET['from_date']) ? $_GET['from_date'] : null;
     $to_date = isset($_GET['to_date']) ? $_GET['to_date'] : null;
-    
+    $user_filter = isset($_GET['user_filter']) ? intval($_GET['user_filter']) : null;
+    $sort_order = isset($_GET['sort_order']) ? $_GET['sort_order'] : 'newest';
+    $search_query = isset($_GET['search_query']) ? $mysqli->real_escape_string($_GET['search_query']) : '';
+
     $sql = "SELECT t.topic_id, t.title, t.description, t.technical, t.created_by,
                    u.name AS creator_name, t.date_time
             FROM Forum_Topics t
             JOIN Users u ON t.created_by = u.user_id
             WHERE 1=1";
 
-    // Add technical filter
     if ($technical_filter !== null && ($technical_filter === '0' || $technical_filter === '1')) {
         $sql .= " AND t.technical = " . intval($technical_filter);
     }
 
-    // Add date filters
     if ($from_date) {
         $sql .= " AND DATE(t.date_time) >= '" . $mysqli->real_escape_string($from_date) . "'";
     }
     if ($to_date) {
         $sql .= " AND DATE(t.date_time) <= '" . $mysqli->real_escape_string($to_date) . "'";
     }
+
+    if ($user_filter !== null && $user_filter > 0) {
+        $sql .= " AND t.created_by = " . $user_filter;
+    }
+
+    if (!empty($search_query)) {
+        $sql .= " AND (LOWER(t.title) LIKE LOWER('%$search_query%') 
+                     OR LOWER(t.description) LIKE LOWER('%$search_query%'))";
+    }
+
+    $topic_id = isset($_GET['topic_id']) ? (int)$_GET['topic_id'] : 0;
+    if ($topic_id > 0) {
+        $sql .= " AND t.topic_id = $topic_id";
+    }
+
+    $order = ($sort_order === 'oldest') ? 'ASC' : 'DESC';
+    $sql .= " ORDER BY t.date_time $order"; 
 
     $result = $mysqli->query($sql);
     $topics = [];
@@ -152,6 +190,20 @@ function updatePost($mysqli) {
     }
 }
 
+function getUsers($mysqli) {
+    $sql = "SELECT user_id, name, job_title FROM Users";
+    $result = $mysqli->query($sql);
+    $users = [];
+    
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $users[] = $row;
+        }
+    }
+    
+    echo json_encode($users);
+}
+
 // Route to the appropriate function
 switch ($process) {
     case 'createPost':
@@ -174,6 +226,9 @@ switch ($process) {
         break;
     case 'updatePost':
         updatePost($mysqli);
+        break;
+    case 'getUsers':
+        getUsers($mysqli);
         break;
     default:
         echo json_encode(["error" => "Invalid process"]);
