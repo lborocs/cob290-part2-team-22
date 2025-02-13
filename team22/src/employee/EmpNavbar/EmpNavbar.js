@@ -379,3 +379,5 @@ return (
     </div>
   );
 };
+
+export default ManNavbar;
