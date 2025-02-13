@@ -212,7 +212,7 @@ const closeDropdown = () => {
             {/* Profile Dropdown */}
             <Nav className="auto">
               <NavDropdown
-                title={`Manager: ${name}`}
+                title={`${name}`}
                 align="end"
                 className="profile-dropdown"
                 show={dropdownOpen}
