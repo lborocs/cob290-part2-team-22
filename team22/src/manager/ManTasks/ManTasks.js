@@ -49,6 +49,8 @@ const ManTasks = () => {
     completed: true,
     binned: false,
   })
+  // New state: an array of employee user_ids to filter tasks by.
+  const [selectedEmployees, setSelectedEmployees] = useState([])
   const [formData, setFormData] = useState(initialFormData)
 
   // Fetch users from the backend
@@ -73,7 +75,6 @@ const ManTasks = () => {
     }
   }
 
-  // Run once on mount to fetch initial data
   useEffect(() => {
     fetchUsers()
     fetchTasks()
@@ -83,23 +84,35 @@ const ManTasks = () => {
   const filterTasksByManager = (allTasks) => {
     if (currentUser.role === "Manager") {
       return allTasks.filter(
-        (task) => Number.parseInt(task.assigned_by) === currentUser.user_id
+        (task) => parseInt(task.assigned_by) === currentUser.user_id
       )
     }
     return allTasks
   }
 
-  // Group tasks by assigned user with view filtering applied
+  // Group tasks by assigned user with view filtering and employee filtering applied
   const groupTasks = () => {
-    const filteredTasks = filterTasksByManager(tasks)
-    return filteredTasks.reduce((acc, task) => {
-      if (Number.parseInt(task.binned) === 1) {
-        if (!viewOptions.binned) return acc
+    // Start with tasks the manager is responsible for
+    let filteredTasks = filterTasksByManager(tasks)
+    // If one or more employees are selected, filter tasks accordingly.
+    if (selectedEmployees.length > 0) {
+      filteredTasks = filteredTasks.filter((task) =>
+        selectedEmployees.includes(parseInt(task.user_id))
+      )
+    }
+    // Apply view options for active, completed, and binned
+    filteredTasks = filteredTasks.filter((task) => {
+      if (parseInt(task.binned) === 1) {
+        return viewOptions.binned
       } else {
-        if (Number.parseInt(task.status) === 0 && !viewOptions.active) return acc
-        if (Number.parseInt(task.status) === 1 && !viewOptions.completed)
-          return acc
+        if (parseInt(task.status) === 0 && !viewOptions.active) return false
+        if (parseInt(task.status) === 1 && !viewOptions.completed) return false
       }
+      return true
+    })
+
+    // Group tasks by user_id
+    return filteredTasks.reduce((acc, task) => {
       acc[task.user_id] = acc[task.user_id] || []
       acc[task.user_id].push(task)
       return acc
@@ -108,7 +121,7 @@ const ManTasks = () => {
 
   const getUserName = (userId) => {
     const user = users.find(
-      (u) => Number.parseInt(u.user_id) === Number.parseInt(userId)
+      (u) => parseInt(u.user_id) === parseInt(userId)
     )
     return user ? user.name : "Unknown"
   }
@@ -136,7 +149,6 @@ const ManTasks = () => {
         body: JSON.stringify(payload),
       })
       await res.json()
-      // Wait for a fresh fetch of tasks so the UI updates immediately
       await fetchTasks()
     } catch (err) {
       console.error("Error saving task", err)
@@ -165,8 +177,8 @@ const ManTasks = () => {
   }
 
   const handleStatusChange = (task) => {
-    if (Number.parseInt(task.binned) === 1) return
-    const newStatus = Number.parseInt(task.status) === 1 ? 0 : 1
+    if (parseInt(task.binned) === 1) return
+    const newStatus = parseInt(task.status) === 1 ? 0 : 1
     updateTaskField(task.individual_task_id, { status: newStatus })
   }
 
@@ -192,14 +204,14 @@ const ManTasks = () => {
   const getEmployeeChartData = (userId) => {
     const employeeTasks = tasks.filter(
       (t) =>
-        Number.parseInt(t.user_id) === Number.parseInt(userId) &&
-        Number.parseInt(t.binned) === 0
+        parseInt(t.user_id) === parseInt(userId) &&
+        parseInt(t.binned) === 0
     )
     const completed = employeeTasks.filter(
-      (t) => Number.parseInt(t.status) === 1
+      (t) => parseInt(t.status) === 1
     ).length
     const remaining = employeeTasks.filter(
-      (t) => Number.parseInt(t.status) === 0
+      (t) => parseInt(t.status) === 0
     ).length
     return {
       labels: ["Completed", "Remaining"],
@@ -213,11 +225,19 @@ const ManTasks = () => {
     }
   }
 
+  // Handle changes in the employee filter multi-select
+  const handleEmployeeFilterChange = (event) => {
+    const selected = Array.from(event.target.selectedOptions, (option) =>
+      parseInt(option.value)
+    )
+    setSelectedEmployees(selected)
+  }
+
   return (
     <Container fluid className="py-5 bg-light">
       <h1 className="text-center mb-5">Task Management Dashboard</h1>
 
-      <div className="d-flex justify-content-between align-items-center mb-4">
+      <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <Button
           variant="primary"
           onClick={() => {
@@ -226,11 +246,11 @@ const ManTasks = () => {
             setFormData(initialFormData)
             setShowModal(true)
           }}
-          className="rounded-pill"
+          className="rounded-pill mb-2 me-2"
         >
           <FiPlus className="me-2" /> Create New Task
         </Button>
-        <ButtonGroup>
+        <ButtonGroup className="mb-2 me-2">
           <Button
             variant={viewOptions.active ? "primary" : "outline-primary"}
             onClick={() => toggleView("active")}
@@ -251,6 +271,24 @@ const ManTasks = () => {
           </Button>
         </ButtonGroup>
       </div>
+
+      {/* Employee Filter */}
+      <Form.Group controlId="employeeFilter" className="mb-4">
+        <Form.Label>Filter by Employee</Form.Label>
+        <Form.Select
+          multiple
+          onChange={handleEmployeeFilterChange}
+          value={selectedEmployees}
+        >
+          {users
+            .filter((user) => user.role.toLowerCase() !== "manager")
+            .map((user) => (
+              <option key={user.user_id} value={user.user_id}>
+                {user.name}
+              </option>
+            ))}
+        </Form.Select>
+      </Form.Group>
 
       {Object.entries(groupTasks()).map(([userId, userTasks]) => (
         <div key={userId} className="mb-5 bg-white p-4 rounded shadow-sm">
@@ -276,16 +314,16 @@ const ManTasks = () => {
                         <Form.Check
                           type="checkbox"
                           id={`task-${task.individual_task_id}`}
-                          checked={Number.parseInt(task.status) === 1}
+                          checked={parseInt(task.status) === 1}
                           onChange={() => handleStatusChange(task)}
-                          disabled={Number.parseInt(task.binned) === 1}
+                          disabled={parseInt(task.binned) === 1}
                         />
                         <span className="ms-2 fw-bold" style={{ fontSize: "1.3em" }}>
                           {task.name}
                         </span>
                       </div>
                       <div>
-                        {Number.parseInt(task.binned) === 1 ? (
+                        {parseInt(task.binned) === 1 ? (
                           <>
                             <Button
                               variant="outline-success"
@@ -317,7 +355,6 @@ const ManTasks = () => {
                                 setFormData({
                                   name: task.name,
                                   priority: task.priority,
-                                  // Format deadline as YYYY-MM-DD for the date input
                                   deadline: new Date(task.deadline)
                                     .toISOString()
                                     .split("T")[0],
@@ -352,9 +389,9 @@ const ManTasks = () => {
                       <p className="mb-2">
                         <small className="text-muted">
                           Status:{" "}
-                          {Number.parseInt(task.binned) === 1
+                          {parseInt(task.binned) === 1
                             ? "Binned"
-                            : Number.parseInt(task.status) === 1
+                            : parseInt(task.status) === 1
                             ? "Completed"
                             : "In Progress"}
                         </small>
@@ -412,10 +449,7 @@ const ManTasks = () => {
               >
                 <option value="">Select Employee</option>
                 {users
-                  .filter(
-                    (user) =>
-                      user.role && user.role.toLowerCase() !== "manager"
-                  )
+                  .filter((user) => user.role && user.role.toLowerCase() !== "manager")
                   .map((user) => (
                     <option key={user.user_id} value={user.user_id}>
                       {user.name}
