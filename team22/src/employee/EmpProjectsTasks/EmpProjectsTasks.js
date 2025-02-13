@@ -28,8 +28,6 @@ import { Pie } from "react-chartjs-2"
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-const API_URL = "http://35.214.101.36/EmpProjectsTasks.php"
-
 
 const EmpProjectsTasks = ( {userId} ) => {
   const [expandedProjects, setExpandedProjects] = useState({})
@@ -47,7 +45,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getProjects&user_id=${userId}`
+        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getProjects&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched projects:", data)
@@ -66,7 +64,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   const fetchTasks = useCallback(async (projectId) => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getTasks&project_id=${projectId}&user_id=${userId}`
+        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getTasks&project_id=${projectId}&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched tasks for project", projectId, ":", data)
@@ -83,7 +81,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   const fetchIndividualTasks = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getIndividualTasks&user_id=${userId}`
+        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getIndividualTasks&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched individual tasks:", data)
@@ -101,7 +99,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   // Toggle a task’s completion status
   const handleTaskToggle = async (projectId, taskId, currentStatus) => {
     try {
-      const res = await fetch(`${API_URL}?action=updateTask`, {
+      const res = await fetch(`${"http://35.214.101.36/EmpProjectsTasks.php"}?action=updateTask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -145,7 +143,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   // Toggle individual task completion status
   const handleIndividualTaskToggle = async (taskId, currentStatus) => {
     try {
-      const res = await fetch(`${API_URL}?action=updateIndividualTask`, {
+      const res = await fetch(`${"http://35.214.101.36/EmpProjectsTasks.php"}?action=updateIndividualTask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -303,27 +301,44 @@ const EmpProjectsTasks = ( {userId} ) => {
                         )}
                       </Button>
                     </div>
-                    <ProgressBar
-                      now={
-                        progressView[project.project_id] === "user"
-                          ? project.user_progress
-                          : project.team_progress
-                      }
-                      label={`${
-                        Math.round(
-                          progressView[project.project_id] === "user"
-                            ? project.user_progress
-                            : project.team_progress
-                        )
-                      }%`}
-                      variant={
-                        (progressView[project.project_id] === "user"
-                          ? project.user_progress
-                          : project.team_progress) >= 100
-                          ? "success"
-                          : "primary"
-                      }
-                    />
+                    {progressView[project.project_id] === "user" ? (
+                      <ProgressBar
+                        now={project.user_progress}
+                        variant={project.user_progress >= 100 ? "success" : "primary"}
+                        style={{ position: "relative" }}
+                      >
+                        <div
+                          style={{
+                            position: "absolute",
+                            top: "50%",
+                            left: "50%",
+                            transform: "translate(-50%, -50%)",
+                            color:
+                              !tasks[project.project_id] || tasks[project.project_id].length === 0
+                                ? "black"
+                                : "transparent",
+                            fontWeight: "bold",
+                          }}
+                        >
+                          N/A
+                        </div>
+                        <ProgressBar
+                          now={project.user_progress}
+                          label={
+                            tasks[project.project_id] && tasks[project.project_id].length > 0
+                              ? `${Math.round(project.user_progress)}%`
+                              : ""
+                          }
+                          variant={project.user_progress >= 100 ? "success" : "primary"}
+                        />
+                      </ProgressBar>
+                    ) : (
+                      <ProgressBar
+                        now={project.team_progress}
+                        label={`${Math.round(project.team_progress)}%`}
+                        variant={project.team_progress >= 100 ? "success" : "primary"}
+                      />
+                    )}
                   </div>
 
                   <Button
