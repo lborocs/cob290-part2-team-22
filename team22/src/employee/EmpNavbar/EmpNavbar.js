@@ -319,7 +319,7 @@ return (
 
       <style>
       {`
-          ..company-logo {
+          .company-logo {
             height: 45px;
             padding-right: 30px;
           }
