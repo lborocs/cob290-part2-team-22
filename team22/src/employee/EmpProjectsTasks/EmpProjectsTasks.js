@@ -30,10 +30,8 @@ ChartJS.register(ArcElement, Tooltip, Legend)
 
 const API_URL = "http://35.214.101.36/EmpProjectsTasks.php"
 
-// Example current employee info – replace with your actual authentication logic
-const currentUser = { user_id: 2, role: "Employee", name: "Alice Smith" }
 
-const EmpProjectsTasks = () => {
+const EmpProjectsTasks = ( {userId} ) => {
   const [expandedProjects, setExpandedProjects] = useState({})
   const [projects, setProjects] = useState([])
   const [tasks, setTasks] = useState({})
@@ -49,7 +47,7 @@ const EmpProjectsTasks = () => {
   const fetchProjects = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getProjects&user_id=${currentUser.user_id}`
+        `${API_URL}?action=getProjects&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched projects:", data)
@@ -68,7 +66,7 @@ const EmpProjectsTasks = () => {
   const fetchTasks = useCallback(async (projectId) => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getTasks&project_id=${projectId}&user_id=${currentUser.user_id}`
+        `${API_URL}?action=getTasks&project_id=${projectId}&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched tasks for project", projectId, ":", data)
@@ -85,7 +83,7 @@ const EmpProjectsTasks = () => {
   const fetchIndividualTasks = useCallback(async () => {
     try {
       const res = await fetch(
-        `${API_URL}?action=getIndividualTasks&user_id=${currentUser.user_id}`
+        `${API_URL}?action=getIndividualTasks&user_id=${userId}`
       )
       const data = await res.json()
       console.log("Fetched individual tasks:", data)
@@ -108,7 +106,7 @@ const EmpProjectsTasks = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           task_id: taskId,
-          user_id: currentUser.user_id,
+          user_id: userId,
           status: currentStatus === 1 ? 0 : 1,
         }),
       })
@@ -152,7 +150,7 @@ const EmpProjectsTasks = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           task_id: taskId,
-          user_id: currentUser.user_id,
+          user_id: userId,
           status: currentStatus === 1 ? 0 : 1,
         }),
       })
