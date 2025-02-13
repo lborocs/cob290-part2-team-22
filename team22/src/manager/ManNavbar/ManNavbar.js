@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dropdown, Button, Form, Modal } from 'react-bootstrap';
+import { Dropdown, Button, Form, Modal, Navbar, Nav, NavDropdown, Container } from 'react-bootstrap';
 
 const ManNavbar = ({ setUserRole, setUserId, userId }) => {
   const [step, setStep] = useState("currentPassword");
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
-  const [showProfileModal, setShowProfileModal] = useState(false); // State for profile modal
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const [isNavbarOpen, setIsNavbarOpen] = useState(false);  
   const navigate = useNavigate();
   const [username, setUsername] = useState('');
   const [role, setRole] = useState('');
@@ -155,66 +157,74 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
     setPasswordData({ currentPassword: '', newPassword: '', confirmNewPassword: '' }); // Clear password fields
   };
 
+// Function to close the dropdown and collapse navbar when a link is clicked
+const closeDropdown = () => {
+  if (window.innerWidth <= 992) {
+    setDropdownOpen(false); 
+    setIsNavbarOpen(false); 
+  }
+};
+
   return (
-    <div
-      className="bg-dark text-white vh-100"
-      style={{
-        width: '250px',
-        position: 'fixed',
-        top: '0',
-        left: '0',
-        overflowY: 'auto',
-        display: 'flex',
-        flexDirection: 'column',
-        justifyContent: 'space-between',
-      }}
-    >
-      <div>
-        <h3 className="text-center py-3">Manager Sidebar</h3>
-        <ul className="nav flex-column px-3">
-          <li className="nav-item">
-            <Link to="/" className="nav-link text-white hover-effect">
-              Home
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/projects" className="nav-link text-white hover-effect">
-              Projects
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/tasks" className="nav-link text-white hover-effect">
-              Tasks
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/employees" className="nav-link text-white hover-effect">
-              Employees
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/todolist" className="nav-link text-white hover-effect">
-              TodoList
-            </Link>
-          </li>
-          <li className="nav-item">
-            <Link to="/forum" className="nav-link text-white hover-effect">
-              Forum
-            </Link>
-          </li>
-        </ul>
-      </div>
-      <div className="px-3 pb-3">
-        <Dropdown drop="up" align="end">
-          <Dropdown.Toggle variant="link" className="nav-link text-white hover-effect">
-            {name}
-          </Dropdown.Toggle>
-          <Dropdown.Menu>
-            <Dropdown.Item onClick={handleProfileModalShow}>Profile</Dropdown.Item>
-            <Dropdown.Item onClick={() => setShowLogoutConfirmation(true)}>Log Out</Dropdown.Item>
-          </Dropdown.Menu>
-        </Dropdown>
-      </div>
+    <div>
+      {/* Top Navbar */}
+      <Navbar expand="lg" bg="dark" variant="dark" fixed="top" className="custom-navbar">
+        <Container fluid>
+          {/* Company Logo */}
+          <Navbar.Brand as={Link} to="/" className="me-auto">
+            <img
+              src="/company-logo.png"
+              alt="Company Logo"
+              className="company-logo"
+            />
+          </Navbar.Brand>
+
+          {/* Hamburger Menu */}
+                 <Navbar.Toggle
+                   aria-controls="navbar-nav"
+                   className="ms-auto"
+                   onClick={() => setIsNavbarOpen(!isNavbarOpen)}
+                 />
+
+          {/* Navbar Links */}
+        <Navbar.Collapse id="navbar-nav" in={isNavbarOpen}> {/* Collapse based on state */}
+            <Nav className="me-auto">
+              <Nav.Link as={Link} to="/" className="text-white" onClick={closeDropdown}>
+                Home
+              </Nav.Link>
+              <Nav.Link as={Link} to="/projects" className="text-white" onClick={closeDropdown}>
+                Projects
+              </Nav.Link>
+              <Nav.Link as={Link} to="/tasks" className="text-white" onClick={closeDropdown}>
+                Tasks
+              </Nav.Link>
+              <Nav.Link as={Link} to="/employees" className="text-white" onClick={closeDropdown}>
+                Employees
+              </Nav.Link>
+              <Nav.Link as={Link} to="/todolist" className="text-white" onClick={closeDropdown}>
+                TodoList
+              </Nav.Link>
+              <Nav.Link as={Link} to="/forum" className="text-white" onClick={closeDropdown}>
+                Forum
+              </Nav.Link>
+            </Nav>
+
+            {/* Profile Dropdown */}
+            <Nav className="auto">
+              <NavDropdown
+                title={`Manager: ${name}`}
+                align="end"
+                className="profile-dropdown"
+                show={dropdownOpen}
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+              >
+                <NavDropdown.Item onClick={handleProfileModalShow}>Profile</NavDropdown.Item>
+                <NavDropdown.Item onClick={() => setShowLogoutConfirmation(true)}>Log Out</NavDropdown.Item>
+              </NavDropdown>
+            </Nav>
+          </Navbar.Collapse>
+        </Container>
+      </Navbar>
 
       {/* Profile Modal */}
       <Modal show={showProfileModal} onHide={handleProfileModalHide}>
@@ -309,12 +319,62 @@ const ManNavbar = ({ setUserRole, setUserId, userId }) => {
       </Modal>
 
       <style>
-        {`
-          .hover-effect:hover {
-            background-color: #343a40; /* Darker background on hover */
-            color: #fff !important; /* Ensure text color stays white */
-            text-decoration: none; /* Remove underline on hover */
+      {`
+          .company-logo {
+            height: 45px;
+            padding-right: 30px;
           }
+
+          .navbar-nav .nav-link {
+            font-size: 18px;
+            padding: 13px 25px;
+            margin-right: 20px;
+            transition: color 0.3s ease-in-out;
+          }
+
+          .navbar-nav .nav-link:hover {
+            color: #f8b400 !important;
+          }
+
+          .navbar-toggler:hover {
+            outline: 2px solid #f8b400;
+          }
+            
+          .navbar-toggler:focus {
+            outline: none;
+            box-shadow: none; 
+          }
+
+          .profile-dropdown .dropdown-menu {
+            background-color: #212529;
+            border: none;
+            min-width: 180px;
+          }
+
+          .profile-dropdown .dropdown-item {
+            color: #f8f9fa;
+            font-size: 16px;
+            padding: 10px 15px;
+            transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out;
+            border: 2px solid transparent;
+            background-color: transparent;
+          }
+
+          .profile-dropdown .dropdown-item:hover {
+            color: #f8b400; 
+            background-color: transparent; 
+          }
+
+          @media (max-width: 992px) {
+            .profile-dropdown {
+              width: 100%;
+              text-align: left; 
+            }
+
+            .profile-dropdown .dropdown-menu {
+              width: 100%;
+              text-align: center;
+            }
         `}
       </style>
     </div>

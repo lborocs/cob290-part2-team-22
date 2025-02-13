@@ -51,7 +51,8 @@ function App() {
           {/* Main Content */}
           <div
             className="flex-grow-1"
-            style={{ marginLeft: '250px', padding: '20px', minHeight: '100vh' }}
+            //style={{ marginLeft: '250px', padding: '20px', minHeight: '100vh' }}
+            style={{ paddingTop: '5rem', paddingLeft: '20px', paddingRight: '20px' }}
           >
             <Routes>
               {/* Employee Routes */}
