@@ -7,7 +7,6 @@ import {
   Modal,
   Form,
   Card,
-  Badge,
   ButtonGroup,
   Row,
   Col,
@@ -18,7 +17,6 @@ import {
   FiPieChart,
   FiEdit,
   FiTrash2,
-  FiArchive,
   FiEye,
   FiEyeOff,
   FiPlus,
@@ -56,7 +54,7 @@ const ManTasks = () => {
   // Fetch users from the backend
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_URL}?action=getUsers`)
+      const res = await fetch(`${API_URL}?action=getUsers&_=${Date.now()}`)
       const data = await res.json()
       setUsers(data)
     } catch (err) {
@@ -64,10 +62,10 @@ const ManTasks = () => {
     }
   }
 
-  // Fetch tasks from the backend
+  // Fetch tasks from the backend with a timestamp to bypass caching
   const fetchTasks = async () => {
     try {
-      const res = await fetch(`${API_URL}?action=getTasks`)
+      const res = await fetch(`${API_URL}?action=getTasks&_=${Date.now()}`)
       const data = await res.json()
       setTasks(data)
     } catch (err) {
@@ -75,6 +73,7 @@ const ManTasks = () => {
     }
   }
 
+  // Run once on mount to fetch initial data
   useEffect(() => {
     fetchUsers()
     fetchTasks()
@@ -129,8 +128,7 @@ const ManTasks = () => {
     } else {
       payload.individual_task_id = editingTask.individual_task_id
     }
-    let url = API_URL
-    url += editingTask ? "?action=updateTask" : "?action=createTask"
+    let url = API_URL + (editingTask ? "?action=updateTask" : "?action=createTask")
     try {
       const res = await fetch(url, {
         method: "POST",
@@ -138,7 +136,8 @@ const ManTasks = () => {
         body: JSON.stringify(payload),
       })
       await res.json()
-      fetchTasks()
+      // Wait for a fresh fetch of tasks so the UI updates immediately
+      await fetchTasks()
     } catch (err) {
       console.error("Error saving task", err)
     }
@@ -159,7 +158,7 @@ const ManTasks = () => {
         body: JSON.stringify({ individual_task_id: taskId, ...updateData }),
       })
       await res.json()
-      fetchTasks()
+      await fetchTasks()
     } catch (err) {
       console.error("Error updating task", err)
     }
@@ -171,7 +170,7 @@ const ManTasks = () => {
     updateTaskField(task.individual_task_id, { status: newStatus })
   }
 
-  // If a task is binned, show options to restore or permanently delete.
+  // Permanently delete a task that is already binned
   const handleDeleteTask = async (taskId) => {
     try {
       const res = await fetch(`${API_URL}?action=deleteTask`, {
@@ -181,7 +180,7 @@ const ManTasks = () => {
       })
       const data = await res.json()
       if (data.success) {
-        fetchTasks()
+        await fetchTasks()
       } else {
         alert("Delete failed: " + data.error)
       }
@@ -190,10 +189,6 @@ const ManTasks = () => {
     }
   }
 
-  // Modified bin handler:
-  // If task is binned, do NOT immediately delete; instead, offer a restore option.
-  // We render separate buttons in the UI.
-  // getEmployeeChartData (for progress chart) remains unchanged.
   const getEmployeeChartData = (userId) => {
     const employeeTasks = tasks.filter(
       (t) =>
@@ -217,12 +212,6 @@ const ManTasks = () => {
       ],
     }
   }
-
-  // Re-fetch users and tasks on mount
-  useEffect(() => {
-    fetchUsers()
-    fetchTasks()
-  }, [])
 
   return (
     <Container fluid className="py-5 bg-light">
@@ -311,21 +300,46 @@ const ManTasks = () => {
                               variant="outline-danger"
                               size="sm"
                               className="ms-2"
-                              onClick={() => handleDeleteTask(task.individual_task_id)}
+                              onClick={() =>
+                                handleDeleteTask(task.individual_task_id)
+                              }
                             >
                               Delete
                             </Button>
                           </>
                         ) : (
-                          <Button
-                            variant="outline-danger"
-                            size="sm"
-                            onClick={() =>
-                              updateTaskField(task.individual_task_id, { binned: 1 })
-                            }
-                          >
-                            <FiTrash2 />
-                          </Button>
+                          <>
+                            <Button
+                              variant="outline-primary"
+                              size="sm"
+                              onClick={() => {
+                                setEditingTask(task)
+                                setFormData({
+                                  name: task.name,
+                                  priority: task.priority,
+                                  // Format deadline as YYYY-MM-DD for the date input
+                                  deadline: new Date(task.deadline)
+                                    .toISOString()
+                                    .split("T")[0],
+                                  assignedTo: task.user_id,
+                                  description: task.description || "",
+                                })
+                                setShowModal(true)
+                              }}
+                            >
+                              <FiEdit />
+                            </Button>
+                            <Button
+                              variant="outline-danger"
+                              size="sm"
+                              className="ms-2"
+                              onClick={() =>
+                                updateTaskField(task.individual_task_id, { binned: 1 })
+                              }
+                            >
+                              <FiTrash2 />
+                            </Button>
+                          </>
                         )}
                       </div>
                     </div>
