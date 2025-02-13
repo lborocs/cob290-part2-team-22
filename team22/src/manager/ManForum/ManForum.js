@@ -351,18 +351,31 @@ function TopicsList({ userId }) {
               </div>
 
               <div className="modal-footer">
-              <button 
-                className="btn btn-primary" 
-                onClick={() => { 
-                  setTechnicalFilter(tempTechnicalFilter);
-                  setFromDate(tempFromDate || null);
-                  setToDate(tempToDate || null);
-                  setUserFilter(tempUserFilter);
-                  setSortOrder(tempSortOrder);
-                  setShowFilterModal(false); 
-                }}
-              >
-                  Apply Filter
+                <button 
+                  type="button" 
+                  className="btn btn-outline-danger me-auto"
+                  onClick={() => {
+                    setTempTechnicalFilter(null);
+                    setTempFromDate('');
+                    setTempToDate('');
+                    setTempUserFilter(null);
+                    setTempSortOrder('newest');
+                  }}
+                >
+                  Clear All
+                </button>
+                <button 
+                  className="btn btn-primary" 
+                  onClick={() => { 
+                    setTechnicalFilter(tempTechnicalFilter);
+                    setFromDate(tempFromDate || null);
+                    setToDate(tempToDate || null);
+                    setUserFilter(tempUserFilter);
+                    setSortOrder(tempSortOrder);
+                    setShowFilterModal(false); 
+                  }}
+                >
+                    Apply Filter
                 </button>
                 <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>Cancel</button>
               </div>
@@ -887,6 +900,18 @@ function TopicView({ userId }) {
                 </div>
               </div>
               <div className="modal-footer">
+                <button 
+                  type="button" 
+                  className="btn btn-outline-danger me-auto"
+                  onClick={() => {
+                    setTempFromDate('');
+                    setTempToDate('');
+                    setTempUserFilter(null);
+                    setTempSortOrder('newest');
+                  }}
+                >
+                  Clear All
+                </button>
                 <button 
                   className="btn btn-primary"
                   onClick={() => {
