@@ -1,13 +1,44 @@
 import React, { useEffect, useState } from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
+import { Pie, Bar } from "react-chartjs-2";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+ChartJS.register(ArcElement, Tooltip, Legend);
 
 function ManagerDashboard() {
-  // State for each section
   const [taskStats, setTaskStats] = useState({ pending_tasks: 0, overdue_tasks: 0, high_priority_tasks: 0, progress: 0 });
   const [projectStats, setProjectStats] = useState({ active_projects: 0, overdue_projects: 0, average_progress: 0 });
   const [userStats, setUserStats] = useState({ total_employees: 0, total_managers: 0, total_team_leaders: 0 });
   const [projects, setProjects] = useState();
-  const [selectedProject, setSelectedProject] = useState("");   
+  const [selectedProject, setSelectedProject] = useState("");
+  const [chartData, setChartData] = useState({
+    labels: ["Upcoming Deadline", "On track", "Overdue"],
+    datasets: [
+      {
+        data: [0, 0, 0],
+        backgroundColor: ["#ff9e17", "#14e809", "#eb2610"],
+        hoverBackgroundColor: ["#bf6708", "#11c408", "#c2200e"],
+      },
+    ],
+  });
+  const [barChartData, setBarChartData] = useState({
+    labels: [],
+    datasets: [
+      {
+        data: [],
+        backgroundColor: "#ff9e17",
+        borderColor: "#0d0d0d",
+      }]
+  });
+  
+  const options = {
+    maintainAspectRatio: false,
+    plugins: {
+      legend: {
+          display: false
+      }
+    }
+  };
+
   async function onProjectChange(e){
         let selection = e.target.value;
         try{
@@ -28,11 +59,9 @@ function ManagerDashboard() {
         
 
 
-  // Loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Fetch tasks
   const fetchTaskStats = async () => {
     try {
       const response = await fetch(`http://35.214.101.36/ManHome.php?process=getTaskStats`);
@@ -118,12 +147,62 @@ function ManagerDashboard() {
     }
   };
 
+  const populateProjectPie = async () => {
+    try {
+      const response = await fetch("http://35.214.101.36/ManHome.php?process=getProjectStats"); 
+      if (!response.ok) {
+        throw new Error('Failed to fetch project status');
+      }
+      const data = await response.json();
+      const { close_deadline_projects, ontrack_projects, overdue_projects } = data.projectStats;
+  
+      setChartData({
+        labels: ["Upcoming Deadline", "On track", "Overdue"],
+        datasets: [
+          {
+            data: [close_deadline_projects, ontrack_projects, overdue_projects],
+            backgroundColor: ["#ff9e17", "#14e809", "#eb2610"],
+            hoverBackgroundColor: ["#bf6708", "#11c408", "#c2200e"],
+          },
+        ],
+      });
+    } catch (error) {
+      console.error("Error fetching project status data:", error);
+    }
+  };
+  const populateUserTaskBar = async () => {
+    try {
+      const response = await fetch("http://35.214.101.36/ManHome.php?process=getUserTasks"); 
+      if (!response.ok) {
+        throw new Error('Failed to fetch user tasks');
+      }
+      const data = await response.json();
+  
+      setBarChartData({
+        labels: data.map(item => item.user_names),
+        datasets: [
+          {
+            data: data.map(item => item.task_count),
+            backgroundColor: "#f5020f",
+            borderColor: "#0d0d0d",
+          }]
+        }
+    );
+
+    } catch (error) {
+      console.error("Error fetching project status data:", error);
+    }
+  };
+  
+  
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        await Promise.all([fetchTaskStats(), fetchProjectStats(), fetchUserStats(), fetchProjects()]);
+        await Promise.all([fetchTaskStats(), fetchProjectStats(), fetchUserStats(), fetchProjects(), populateProjectPie(), populateUserTaskBar()]);
       } catch (error) {
+        console.log(chartData);
         console.error('Error fetching data:', error);
         setError('Failed to fetch data. Please try again later.');
       } finally {
@@ -147,14 +226,14 @@ function ManagerDashboard() {
       </div>
     );
   }
-  
+  console.log(chartData);
   return (
     <div className="container mt-4">
-      <h1>Manager Dashboard</h1>
+      <h1 className="text-center mb-4">Manager Dashboard</h1>
       <div className="row mt-4">
         <div className="col-md-6 mb-4">
           <div className="card h-100">
-            <div className="card-header bg-primary text-white">
+            <div className="card-header bg-primary bg-gradient text-white">
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="bi bi-list-task me-2"></i> Task Information
@@ -189,7 +268,7 @@ function ManagerDashboard() {
 
         <div className="col-md-6 mb-4">
           <div className="card h-100">
-            <div className="card-header bg-success text-white">
+            <div className="card-header bg-success bg-gradient text-white">
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Project Information
               </h5>
@@ -222,35 +301,62 @@ function ManagerDashboard() {
             </div>
           </div>
         </div>
-        <div className="col-md-6 mb-4">
-          <div className="card h-100">
-            <div className="card-header bg-warning text-dark">
-              <h5 className="card-title mb-0">
-                <i className="bi bi-person"></i> Overall User Information
-              </h5>
-            </div>
-            <div className="card-body">
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <span>Total Users</span>
-                <span className="badge bg-primary">{userStats.total_users}</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <span>Total Managers</span>
-                <span className="badge bg-success">{userStats.total_managers}</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <span>Total Team Leaders</span>
-                <span className="badge bg-danger">{userStats.total_team_leaders}</span>
-              </div>
-              <div className="d-flex justify-content-between align-items-center mb-3">
-                <span>Total Employees</span>
-                <span className="badge bg-info">{userStats.total_employees}</span>
-              </div>
-            </div>
+        <div className="row mt-4">
+    <div className="col-6 mb-4">
+      <div className="card h-100">
+        <div className="card-header bg-warning bg-gradient text-dark">
+          <h5 className="card-title mb-0">
+            <i className="bi bi-person"></i> Overall User Information
+          </h5>
+        </div>
+        <div className="card-body">
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span>Total Users</span>
+            <span className="badge bg-primary">{userStats.total_users}</span>
+          </div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span>Total Managers</span>
+            <span className="badge bg-success">{userStats.total_managers}</span>
+          </div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span>Total Team Leaders</span>
+            <span className="badge bg-danger">{userStats.total_team_leaders}</span>
+          </div>
+          <div className="d-flex justify-content-between align-items-center mb-3">
+            <span>Total Employees</span>
+            <span className="badge bg-info">{userStats.total_employees}</span>
           </div>
         </div>
       </div>
     </div>
+    <div className="col-3 mb-4">
+      <div className="card h-100">
+        <div className="card-header bg-info bg-gradient text-dark">
+          <h5 className="card-title mb-0">
+            <i className="bi bi-person"></i> Active Project Status
+          </h5>
+        </div>
+        <div className="card-body d-flex justify-content-center">
+          <Pie data={chartData} />
+        </div>
+      </div>
+    </div>
+
+    <div className="col-3 mb-4">
+      <div className="card h-100">
+        <div className="card-header bg-danger bg-gradient text-white">
+          <h5 className="card-title mb-0">
+            <i className="bi bi-person"></i> Top 5 highest task count
+          </h5>
+        </div>
+        <div className="card-body d-flex justify-content-center">
+          <Bar data={barChartData} options={options}/>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
   );
 }
 

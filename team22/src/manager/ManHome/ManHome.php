@@ -81,7 +81,9 @@ function getProjectStats($mysqli) {
     $queries = [
         "active_projects" => "SELECT COUNT(*) AS active_projects FROM Projects WHERE completed = 0 AND binned = 0",
         "overdue_projects" => "SELECT COUNT(*) AS overdue_projects FROM Projects WHERE deadline < CURDATE() AND completed = 0 AND binned = 0",
-        "average_progress" => "SELECT ROUND(AVG(progress),0) AS average_progress FROM Projects WHERE completed = 0 AND binned = 0"
+        "average_progress" => "SELECT ROUND(AVG(progress),0) AS average_progress FROM Projects WHERE completed = 0 AND binned = 0",
+        "close_deadline_projects" => "SELECT COUNT(*) as close_deadline_projects FROM Projects WHERE DATEDIFF(deadline, CURDATE()) BETWEEN 0 AND 1",
+        "ontrack_projects" => "SELECT COUNT(*) as ontrack_projects FROM Projects WHERE DATEDIFF(deadline, CURDATE()) > 1"
     ];
 
     $projectStats = [];
@@ -120,6 +122,23 @@ function getUserStats($mysqli) {
     echo json_encode(["userStats" => $userStats]);
 }
 
+function getUserTasks($mysqli) {
+    $query = "SELECT Users.name AS user_names, COUNT(*) AS task_count FROM Users INNER JOIN project_tasks ON Users.user_id = project_tasks.user_id GROUP BY Users.name ORDER BY task_count DESC LIMIT 5";
+    $result = $mysqli->query($query);
+    $taskCount = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $taskCount[] = $row;
+        }
+        echo json_encode($taskCount);
+    } else {
+        echo json_encode(["error" => "Unable to fetch $key"]);
+        return;
+    }
+}
+
+
+
 switch ($process) {
     case 'getTaskStats':
         getTaskStats($mysqli);
@@ -135,6 +154,9 @@ switch ($process) {
         break;
     case 'getTaskStatsByProject':
         getTaskStatsByProject($mysqli, $project_id);
+        break;
+    case 'getUserTasks':
+        getUserTasks($mysqli);
         break;
     default:
         echo json_encode(["error" => "Invalid process"]);
