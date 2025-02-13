@@ -20,9 +20,7 @@ import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff, FiPlus, FiChe
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
-// API URL pointing to our backend PHP file
 const API_URL = 'http://35.214.101.36/ManProjects.php'
-// Example current manager info
 const currentUser = { user_id: 3, role: "Manager", name: "John Manager" }
 
 const initialFormData = {
@@ -49,7 +47,6 @@ const ManProjects = () => {
   const [users, setUsers] = useState([])
   const [formData, setFormData] = useState(initialFormData)
 
-  // Fetch users from backend
   const fetchUsers = async () => {
     try {
       const res = await fetch(`${API_URL}?action=getUsers`)
@@ -60,7 +57,6 @@ const ManProjects = () => {
     }
   }
 
-  // Fetch projects from backend
   const fetchProjects = async () => {
     try {
       const res = await fetch(`${API_URL}?action=getProjects`)
@@ -76,14 +72,12 @@ const ManProjects = () => {
     fetchProjects()
   }, [])
 
-  // Derive project status from completed and binned fields
   const getProjectStatus = (project) => {
     if (parseInt(project.binned) === 1) return 'binned'
     if (parseInt(project.completed) === 1) return 'completed'
     return 'active'
   }
 
-  // Group projects by status
   const groupProjectsByStatus = () => {
     return projects.reduce((acc, project) => {
       const status = getProjectStatus(project)
@@ -101,7 +95,6 @@ const ManProjects = () => {
     }
   }
 
-  // Overall Projects Progress: pie chart of completed vs active projects
   const getOverallProjectChartData = () => {
     const total = projects.length
     const completed = projects.filter(project => parseInt(project.completed) === 1).length
@@ -116,9 +109,6 @@ const ManProjects = () => {
     }
   }
 
-  // Create or update a project with validations:
-  // 1. Every task must have an assigned employee.
-  // 2. Each task's assignee must be one of the assigned employees.
   const handleSubmit = async (e) => {
     e.preventDefault()
     for (let task of formData.tasks) {
@@ -163,7 +153,6 @@ const ManProjects = () => {
     setFormData(initialFormData)
   }
 
-  // Update project status fields (completed, binned)
   const updateProjectField = async (projectId, updateData) => {
     try {
       const res = await fetch(`${API_URL}?action=updateProjectField`, {
@@ -188,7 +177,6 @@ const ManProjects = () => {
     }
   }
 
-  // Permanently delete a project (only allowed if the project is binned)
   const handleDeleteProject = async (projectId) => {
     try {
       const res = await fetch(`${API_URL}?action=deleteProject`, {
@@ -207,6 +195,24 @@ const ManProjects = () => {
     }
   }
 
+  const handleDeleteTask = async (taskId) => {
+    try {
+      const res = await fetch(`${API_URL}?action=deleteTask`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ task_id: taskId }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchProjects()
+      } else {
+        alert("Delete failed: " + data.error)
+      }
+    } catch (err) {
+      console.error("Error deleting task", err)
+    }
+  }
+
   const getProjectChartData = (project) => {
     const tasks = project.tasks || []
     const completedTasks = tasks.filter(t => parseInt(t.status) === 1).length
@@ -222,11 +228,10 @@ const ManProjects = () => {
   }
 
   const getUserName = (userId) => {
-    const user = users.find(u => u.user_id == userId)  // Using == to allow string/number comparison
+    const user = users.find(u => u.user_id == userId)
     return user ? user.name : 'Unknown'
   }
 
-  // Add a new task row in the project creation/edit form
   const handleAddTask = () => {
     setFormData(prev => ({
       ...prev,
@@ -234,12 +239,18 @@ const ManProjects = () => {
     }))
   }
 
-  // Update a task field in the form tasks array
   const handleTaskChange = (index, field, value) => {
     const newTasks = formData.tasks.map((task, i) =>
       i === index ? { ...task, [field]: value } : task
     )
     setFormData(prev => ({ ...prev, tasks: newTasks }))
+  }
+
+  const handleFormTaskDelete = (taskId) => {
+    setFormData(prev => ({
+      ...prev,
+      tasks: prev.tasks.filter(task => task.id !== taskId)
+    }))
   }
 
   return (
@@ -330,7 +341,7 @@ const ManProjects = () => {
                                 projectName: project.name,
                                 description: project.description,
                                 teamLeader: project.team_leader_id,
-                                employees: project.employees, // assumed as user IDs (as strings)
+                                employees: project.employees,
                                 priority: project.priority,
                                 deadline: project.deadline,
                                 tasks: project.tasks.map(task => ({
@@ -489,9 +500,11 @@ const ManProjects = () => {
                                     label={task.task_name}
                                     disabled={getProjectStatus(project) === 'binned'}
                                   />
-                                  {task.assignee && (
-                                    <Badge bg="info">{getUserName(task.assigned_by)}</Badge>
-                                  )}
+                                  <div>
+                                    {task.assignee && (
+                                      <Badge bg="info" className="me-2">{getUserName(task.assigned_by)}</Badge>
+                                    )}
+                                  </div>
                                 </div>
                               </ListGroup.Item>
                             ))}
@@ -505,7 +518,6 @@ const ManProjects = () => {
           )
       )}
 
-      {/* Project Creation/Edit Modal */}
       <Modal 
         show={showModal} 
         onHide={() => { setShowModal(false); setEditingProject(null); }} 
@@ -592,15 +604,17 @@ const ManProjects = () => {
             </Form.Group>
             <h5>Tasks</h5>
             {formData.tasks.map((task, index) => (
-              <div key={task.id} className="d-flex gap-2 mb-2">
+              <div key={task.id} className="d-flex gap-2 mb-2 align-items-center">
                 <Form.Control
                   placeholder="Task Name"
                   value={task.name}
                   onChange={(e) => handleTaskChange(index, 'name', e.target.value)}
+                  style={{ flex: 2 }}
                 />
                 <Form.Select
                   value={task.assignee}
                   onChange={(e) => handleTaskChange(index, 'assignee', e.target.value)}
+                  style={{ flex: 2 }}
                 >
                   <option value="">Select Assigned Employee</option>
                   {users
@@ -613,6 +627,14 @@ const ManProjects = () => {
                       <option key={user.user_id} value={user.user_id}>{user.name}</option>
                     ))}
                 </Form.Select>
+                <Button
+                  variant="danger"
+                  onClick={() => handleFormTaskDelete(task.id)}
+                  disabled={formData.tasks.length === 1}
+                  style={{ flex: 0 }}
+                >
+                  <FiTrash2 />
+                </Button>
               </div>
             ))}
             <Button variant="outline-secondary" onClick={handleAddTask} className="mt-2">
@@ -631,7 +653,6 @@ const ManProjects = () => {
         </Form>
       </Modal>
 
-      {/* Project Progress Modal */}
       <Modal show={showProjectChart} onHide={() => { setShowProjectChart(false); setSelectedProject(null); }}>
         <Modal.Header closeButton>
           <Modal.Title>{selectedProject ? `${selectedProject.name} Progress` : "Overall Projects Progress"}</Modal.Title>
