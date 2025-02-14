@@ -491,102 +491,213 @@ function TodoList({ userId }) {
                         </Modal.Footer>
                     </Modal>
 
-                    <Modal show={showModal} onHide={handleClose}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>{editingIndex !== null ? 'Edit Task' : 'Add New Task'}</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            <Form>
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Task Name</Form.Label>
-                                    <Form.Control
-                                        type="text"
-                                        name="name"
-                                        value={newTodo.name}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter task name"
-                                    />
-                                </Form.Group>
+                    <Modal show={showModal} onHide={handleClose} backdrop="static" keyboard={false}>
+    <Modal.Header closeButton>
+        <Modal.Title>{editingIndex !== null ? 'Edit Task' : 'Add New Task'}</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        <Form>
+            <Form.Group className="mb-3">
+                <Form.Label>Task Name</Form.Label>
+                <Form.Control
+                    type="text"
+                    name="name"
+                    value={newTodo.name}
+                    onChange={handleInputChange}
+                    placeholder="Enter task name"
+                />
+            </Form.Group>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Description</Form.Label>
-                                    <Form.Control
-                                        as="textarea"
-                                        rows={3}
-                                        name="description"
-                                        value={newTodo.description}
-                                        onChange={handleInputChange}
-                                        placeholder="Enter task description"
-                                    />
-                                </Form.Group>
+            <Form.Group className="mb-3">
+                <Form.Label>Description</Form.Label>
+                <Form.Control
+                    as="textarea"
+                    rows={3}
+                    name="description"
+                    value={newTodo.description}
+                    onChange={handleInputChange}
+                    placeholder="Enter task description"
+                />
+            </Form.Group>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Status</Form.Label>
-                                    <Form.Select
-                                        name="status"
-                                        value={newTodo.status}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="pending">Pending</option>
-                                        <option value="completed">Completed</option>
-                                    </Form.Select>
-                                </Form.Group>
+            <Form.Group className="mb-3">
+                <Form.Label>Status</Form.Label>
+                <Form.Select
+                    name="status"
+                    value={newTodo.status}
+                    onChange={handleInputChange}
+                >
+                    <option value="pending">Pending</option>
+                    <option value="completed">Completed</option>
+                </Form.Select>
+            </Form.Group>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Priority</Form.Label>
-                                    <Form.Select
-                                        name="priority"
-                                        value={newTodo.priority}
-                                        onChange={handleInputChange}
-                                    >
-                                        <option value="low">Low</option>
-                                        <option value="medium">Medium</option>
-                                        <option value="high">High</option>
-                                    </Form.Select>
-                                </Form.Group>
+            <Form.Group className="mb-3">
+                <Form.Label>Priority</Form.Label>
+                <Form.Select
+                    name="priority"
+                    value={newTodo.priority}
+                    onChange={handleInputChange}
+                >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                </Form.Select>
+            </Form.Group>
 
-                                <Form.Group className="mb-3">
-                                    <Form.Label>Due Date</Form.Label>
-                                    <Form.Control
-                                        type="date"
-                                        name="dueDate"
-                                        value={newTodo.dueDate}
-                                        onChange={handleInputChange}
-                                    />
-                                </Form.Group>
-                            </Form>
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={handleClose}>
-                                Cancel
-                            </Button>
-                            <Button variant="primary" onClick={handleSubmit}>
-                                {editingIndex !== null ? 'Save Changes' : 'Add Task'}
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
+            <Form.Group className="mb-3">
+                <Form.Label>Due Date</Form.Label>
+                <Form.Control
+                    type="date"
+                    name="dueDate"
+                    value={newTodo.dueDate}
+                    onChange={handleInputChange}
+                />
+            </Form.Group>
+        </Form>
+    </Modal.Body>
+    <Modal.Footer>
+        <Button variant="secondary" onClick={handleClose}>
+            Cancel
+        </Button>
+        <Button variant="primary" onClick={handleSubmit}>
+            {editingIndex !== null ? 'Save Changes' : 'Add Task'}
+        </Button>
+    </Modal.Footer>
+</Modal>
 
-                    <Modal show={showDeleteModal} onHide={handleCloseDeleteModal}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>Confirm Deletion</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            Are you sure you want to delete this task?
-                            {deleteIndex !== null && (
-                                <div className="mt-3">
-                                    <strong>Task: </strong> {todos[deleteIndex].name}
-                                </div>
-                            )}
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={handleCloseDeleteModal}>
-                                Cancel
-                            </Button>
-                            <Button variant="danger" onClick={confirmDelete}>
-                                Delete Task
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
+<Modal 
+    show={showBinModal} 
+    onHide={() => {
+        setShowBinModal(false);
+        setSelectedBinItems([]);
+    }}
+    backdrop="static" 
+    keyboard={false}
+    size="lg"
+>
+    <Modal.Header closeButton>
+        <Modal.Title>Recycle Bin</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        <ListGroup>
+            {deletedTodos.map((todo, index) => (
+                <ListGroup.Item 
+                    key={index}
+                    className="d-flex justify-content-between align-items-center"
+                >
+                    <Form.Check
+                        type="checkbox"
+                        checked={selectedBinItems.includes(index)}
+                        onChange={() => handleBinItemSelect(index)}
+                        label={
+                            <div>
+                                <h6 className="mb-1">{todo.name}</h6>
+                                <small className="text-muted">
+                                    Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
+                                </small>
+                            </div>
+                        }
+                    />
+                    <div>
+                        <Badge 
+                            bg={getPriorityBadgeVariant(todo.priority)}
+                            className="me-2"
+                        >
+                            {todo.priority}
+                        </Badge>
+                        <Badge 
+                            bg={todo.status === 'completed' ? 'success' : 'secondary'}
+                        >
+                            {todo.status}
+                        </Badge>
+                    </div>
+                </ListGroup.Item>
+            ))}
+        </ListGroup>
+    </Modal.Body>
+    <Modal.Footer>
+        <Button 
+            variant="success" 
+            disabled={selectedBinItems.length === 0}
+            onClick={() => setShowRestoreModal(true)}
+        >
+            Restore Selected
+        </Button>
+        <Button 
+            variant="danger" 
+            disabled={selectedBinItems.length === 0}
+            onClick={() => setShowPermanentDeleteModal(true)}
+        >
+            Delete Permanently
+        </Button>
+    </Modal.Footer>
+</Modal>
+
+<Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)} backdrop="static" keyboard={false}>
+    <Modal.Header closeButton>
+        <Modal.Title>Confirm Restore</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        Are you sure you want to restore {selectedBinItems.length} selected task(s)?
+    </Modal.Body>
+    <Modal.Footer>
+        <Button variant="secondary" onClick={() => setShowRestoreModal(false)}>
+            Cancel
+        </Button>
+        <Button variant="success" onClick={handleRestoreConfirm}>
+            Restore
+        </Button>
+    </Modal.Footer>
+</Modal>
+
+<Modal 
+    show={showPermanentDeleteModal} 
+    onHide={() => setShowPermanentDeleteModal(false)}
+    backdrop="static" 
+    keyboard={false}
+>
+    <Modal.Header closeButton>
+        <Modal.Title>Confirm Permanent Deletion</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        Are you sure you want to permanently delete {selectedBinItems.length} selected task(s)? 
+        This action cannot be undone.
+    </Modal.Body>
+    <Modal.Footer>
+        <Button 
+            variant="secondary" 
+            onClick={() => setShowPermanentDeleteModal(false)}
+        >
+            Cancel
+        </Button>
+        <Button variant="danger" onClick={handlePermanentDeleteConfirm}>
+            Delete Permanently
+        </Button>
+    </Modal.Footer>
+</Modal>
+
+<Modal show={showDeleteModal} onHide={handleCloseDeleteModal} backdrop="static" keyboard={false}>
+    <Modal.Header closeButton>
+        <Modal.Title>Confirm Deletion</Modal.Title>
+    </Modal.Header>
+    <Modal.Body>
+        Are you sure you want to delete this task?
+        {deleteIndex !== null && (
+            <div className="mt-3">
+                <strong>Task: </strong> {todos[deleteIndex].name}
+            </div>
+        )}
+    </Modal.Body>
+    <Modal.Footer>
+        <Button variant="secondary" onClick={handleCloseDeleteModal}>
+            Cancel
+        </Button>
+        <Button variant="danger" onClick={confirmDelete}>
+            Delete Task
+        </Button>
+    </Modal.Footer>
+</Modal>
                 </Col>
             </Row>
         </Container>
