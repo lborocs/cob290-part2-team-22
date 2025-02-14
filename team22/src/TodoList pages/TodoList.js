@@ -1,20 +1,13 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { 
-    Container, 
-    Row, 
-    Col, 
-    Form, 
-    Button, 
-    ListGroup, 
-    Modal,
-    Badge,
-    ButtonGroup,
-    Dropdown,
-    Card
-} from 'react-bootstrap';
+import React, { useState, useEffect } from 'react';
+import { Container, Row, Col, Form, Button, ListGroup, Modal, Badge, ButtonGroup, Dropdown, Card } from 'react-bootstrap';
+import { Calendar, momentLocalizer } from 'react-big-calendar';
+import moment from 'moment';
+import 'react-big-calendar/lib/css/react-big-calendar.css';
 import TodoProgressCharts from './TodoProgressCharts';
-import React, { useState } from 'react';
-import { useEffect } from 'react';
+
+// Configure the calendar localizer
+const localizer = momentLocalizer(moment);
 
 function TodoList({ userId }) {
     const [todos, setTodos] = useState([]);
@@ -33,6 +26,15 @@ function TodoList({ userId }) {
         status: 'all'
     });
 
+    const [newTodo, setNewTodo] = useState({
+        name: '',
+        description: '',
+        status: 'pending',
+        priority: 'low',
+        dueDate: ''
+    });
+
+    // Fetch todos from the backend
     useEffect(() => {
         fetchTodos();
     }, []);
@@ -41,7 +43,6 @@ function TodoList({ userId }) {
         try {
             const response = await fetch(`http://35.214.101.36/ToDoList.php?user_id=${userId}`);
             const data = await response.json();
-            console.log(data);
             const formattedData = data.map(task => ({
                 ...task,
                 name: task.title || '',
@@ -49,20 +50,99 @@ function TodoList({ userId }) {
                 status: task.status?.toLowerCase() || 'pending',
                 priority: task.priority?.toLowerCase() || 'low'
             }));
-    
             setTodos(formattedData);
         } catch (error) {
             console.error('Error fetching todos:', error);
         }
     };
+
+    // Format todos as events for the calendar
+    const getCalendarEvents = () => {
+        return todos.map(todo => ({
+            id: todo.todo_id,
+            title: todo.name,
+            start: todo.dueDate ? new Date(todo.dueDate) : new Date(),
+            end: todo.dueDate ? new Date(todo.dueDate) : new Date(),
+            allDay: true,
+            status: todo.status,
+            priority: todo.priority
+        }));
+    };
+
+    // Custom event component for the calendar
+    const EventComponent = ({ event }) => {
+        const [isHovered, setIsHovered] = useState(false);
     
-    const [newTodo, setNewTodo] = useState({
-        name: '',
-        description: '',
-        status: 'pending',
-        priority: 'low',
-        dueDate: ''
-    });
+        const getPriorityColor = (priority) => {
+            switch (priority) {
+                case 'high':
+                    return '#dc3545'; // Red
+                case 'medium':
+                    return '#ffc107'; // Yellow
+                default:
+                    return '#17a2b8'; // Blue
+            }
+        };
+    
+        return (
+            <div
+                style={{
+                    padding: '5px',
+                    background: getPriorityColor(event.priority),
+                    color: '#fff',
+                    borderRadius: '4px',
+                    border: 'none',
+                    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                    cursor: 'pointer',
+                    transition: 'all 0.3s ease',
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    overflow: 'hidden',
+                    position: 'relative', // Needed for the pop-up bubble
+                }}
+                onMouseEnter={() => setIsHovered(true)}
+                onMouseLeave={() => setIsHovered(false)}
+                onClick={() => {
+                    // Find the corresponding task in the todo list
+                    const taskIndex = todos.findIndex(todo => todo.todo_id === event.id);
+                    if (taskIndex !== -1) {
+                        // Highlight the task in the list
+                        const taskElement = document.getElementById(`todo-${taskIndex}`);
+                        if (taskElement) {
+                            taskElement.style.transform = 'scale(1.1)';
+                            setTimeout(() => {
+                                taskElement.style.transform = 'scale(1)';
+                            }, 300);
+                        }
+                    }
+                }}
+            >
+                {/* Pop-up bubble for event name */}
+                {isHovered && (
+                    <div
+                        style={{
+                            position: 'absolute',
+                            top: '-30px', // Position above the event block
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            background: 'rgba(0, 0, 0, 0.8)',
+                            color: '#fff',
+                            padding: '5px 10px',
+                            borderRadius: '4px',
+                            fontSize: '12px',
+                            whiteSpace: 'nowrap', // Prevent text from wrapping
+                            zIndex: 1000, // Ensure it appears above other elements
+                        }}
+                    >
+                        {event.title}
+                    </div>
+                )}
+            </div>
+        );
+    };
 
     const handleClose = () => {
         setShowModal(false);
@@ -112,7 +192,7 @@ function TodoList({ userId }) {
             console.error('Task name is required.');
             return;
         }
-    
+
         const method = editingIndex !== null ? 'PUT' : 'POST';
         const payload = {
             todo_id: editingIndex !== null ? todos[editingIndex].todo_id : undefined,
@@ -123,17 +203,16 @@ function TodoList({ userId }) {
             priority: newTodo.priority.charAt(0).toUpperCase() + newTodo.priority.slice(1),
             due_date: newTodo.dueDate
         };
-    
+
         try {
             const response = await fetch('http://35.214.101.36/ToDoList.php', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-    
+
             if (response.ok) {
                 if (editingIndex !== null) {
-                    // Update the local state for the edited task
                     const updatedTodos = [...todos];
                     updatedTodos[editingIndex] = {
                         ...updatedTodos[editingIndex],
@@ -145,9 +224,8 @@ function TodoList({ userId }) {
                     };
                     setTodos(updatedTodos);
                 } else {
-                    // If it's a new task, add it to the local state immediately
                     const newTask = {
-                        todo_id: Date.now(), // Temporary ID until the backend responds
+                        todo_id: Date.now(),
                         name: newTodo.name,
                         description: newTodo.description,
                         status: newTodo.status,
@@ -157,7 +235,7 @@ function TodoList({ userId }) {
                     setTodos([...todos, newTask]);
                 }
                 handleClose();
-                fetchTodos(); // Refresh the list to get the correct data from the backend
+                fetchTodos();
             } else {
                 console.error('Error saving task:', response.statusText);
             }
@@ -169,7 +247,7 @@ function TodoList({ userId }) {
     const toggleTodo = async (index) => {
         const updatedTodo = { ...todos[index] };
         updatedTodo.status = updatedTodo.status === 'completed' ? 'pending' : 'completed';
-        
+
         try {
             await fetch('http://35.214.101.36/ToDoList.php', {
                 method: 'PUT',
@@ -179,8 +257,7 @@ function TodoList({ userId }) {
                     status: updatedTodo.status.charAt(0).toUpperCase() + updatedTodo.status.slice(1)
                 })
             });
-    
-            // Update the local state to reflect the new status
+
             const updatedTodos = [...todos];
             updatedTodos[index] = updatedTodo;
             setTodos(updatedTodos);
@@ -217,13 +294,34 @@ function TodoList({ userId }) {
         });
     };
 
-    const handleRestoreConfirm = () => {
+    const handleRestoreConfirm = async () => {
         const itemsToRestore = selectedBinItems.map(index => deletedTodos[index]);
-        setTodos([...todos, ...itemsToRestore]);
-        setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
-        setSelectedBinItems([]);
-        setShowRestoreModal(false);
-        setShowBinModal(false);
+
+        try {
+            for (const task of itemsToRestore) {
+                await fetch('http://35.214.101.36/ToDoList.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        todo_id: task.todo_id,
+                        user_id: userId,
+                        title: task.name,
+                        description: task.description,
+                        status: task.status.charAt(0).toUpperCase() + task.status.slice(1),
+                        priority: task.priority.charAt(0).toUpperCase() + task.priority.slice(1),
+                        due_date: task.dueDate
+                    })
+                });
+            }
+
+            setTodos([...todos, ...itemsToRestore]);
+            setDeletedTodos(deletedTodos.filter((_, index) => !selectedBinItems.includes(index)));
+            setSelectedBinItems([]);
+            setShowRestoreModal(false);
+            setShowBinModal(false);
+        } catch (error) {
+            console.error('Error restoring tasks:', error);
+        }
     };
 
     const handlePermanentDeleteConfirm = () => {
@@ -267,9 +365,10 @@ function TodoList({ userId }) {
     };
 
     return (
-        <Container className="mt-5" style={{ maxWidth: '1200px' }}>
-            <Row className="justify-content-md-center">
-                <Col md={12}>
+        <Container className="mt-5" style={{ maxWidth: '1400px' }}>
+            <Row>
+                {/* Todo List Section */}
+                <Col md={8}>
                     <div className="d-flex justify-content-between align-items-center mb-4">
                         <h1 className="display-4" style={{ fontWeight: '600', color: '#2c3e50' }}>To-do List</h1>
                         <div>
@@ -332,6 +431,7 @@ function TodoList({ userId }) {
                                 {filteredTodos.map((todo, index) => (
                                     <ListGroup.Item 
                                         key={index} 
+                                        id={`todo-${index}`}
                                         className="d-flex justify-content-between align-items-start py-3 border-left border-3"
                                         style={{
                                             borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
@@ -339,7 +439,7 @@ function TodoList({ userId }) {
                                             borderRadius: '10px',
                                             marginBottom: '10px',
                                             boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            transition: 'transform 0.3s ease',
                                             cursor: 'pointer'
                                         }}
                                         onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -400,323 +500,269 @@ function TodoList({ userId }) {
                             </ListGroup>
                         </>
                     )}
+                </Col>
 
-                    <Modal 
-                        show={showBinModal} 
-                        onHide={() => {
-                            setShowBinModal(false);
-                            setSelectedBinItems([]);
+                {/* Calendar Section */}
+                <Col md={4}>
+                    <Card
+                        className="mb-4"
+                        style={{
+                            borderRadius: '15px',
+                            boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)',
+                            border: 'none',
                         }}
-                        size="lg"
                     >
-                        <Modal.Header closeButton>
-                            <Modal.Title>Recycle Bin</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            <ListGroup>
-                                {deletedTodos.map((todo, index) => (
-                                    <ListGroup.Item 
-                                        key={index}
-                                        className="d-flex justify-content-between align-items-center"
-                                    >
-                                        <Form.Check
-                                            type="checkbox"
-                                            checked={selectedBinItems.includes(index)}
-                                            onChange={() => handleBinItemSelect(index)}
-                                            label={
-                                                <div>
-                                                    <h6 className="mb-1">{todo.name}</h6>
-                                                    <small className="text-muted">
-                                                        Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
-                                                    </small>
-                                                </div>
-                                            }
-                                        />
-                                        <div>
-                                            <Badge 
-                                                bg={getPriorityBadgeVariant(todo.priority)}
-                                                className="me-2"
-                                            >
-                                                {todo.priority}
-                                            </Badge>
-                                            <Badge 
-                                                bg={todo.status === 'completed' ? 'success' : 'secondary'}
-                                            >
-                                                {todo.status}
-                                            </Badge>
-                                        </div>
-                                    </ListGroup.Item>
-                                ))}
-                            </ListGroup>
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button 
-                                variant="success" 
-                                disabled={selectedBinItems.length === 0}
-                                onClick={() => setShowRestoreModal(true)}
+                        <Card.Body>
+                            <h5
+                                className="mb-3"
+                                style={{
+                                    fontWeight: '600',
+                                    color: '#2c3e50',
+                                    textAlign: 'center',
+                                }}
                             >
-                                Restore Selected
-                            </Button>
-                            <Button 
-                                variant="danger" 
-                                disabled={selectedBinItems.length === 0}
-                                onClick={() => setShowPermanentDeleteModal(true)}
-                            >
-                                Delete Permanently
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-
-                    <Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)}>
-                        <Modal.Header closeButton>
-                            <Modal.Title>Confirm Restore</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            Are you sure you want to restore {selectedBinItems.length} selected task(s)?
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button variant="secondary" onClick={() => setShowRestoreModal(false)}>
-                                Cancel
-                            </Button>
-                            <Button variant="success" onClick={handleRestoreConfirm}>
-                                Restore
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-
-                    <Modal 
-                        show={showPermanentDeleteModal} 
-                        onHide={() => setShowPermanentDeleteModal(false)}
-                    >
-                        <Modal.Header closeButton>
-                            <Modal.Title>Confirm Permanent Deletion</Modal.Title>
-                        </Modal.Header>
-                        <Modal.Body>
-                            Are you sure you want to permanently delete {selectedBinItems.length} selected task(s)? 
-                            This action cannot be undone.
-                        </Modal.Body>
-                        <Modal.Footer>
-                            <Button 
-                                variant="secondary" 
-                                onClick={() => setShowPermanentDeleteModal(false)}
-                            >
-                                Cancel
-                            </Button>
-                            <Button variant="danger" onClick={handlePermanentDeleteConfirm}>
-                                Delete Permanently
-                            </Button>
-                        </Modal.Footer>
-                    </Modal>
-
-                    <Modal show={showModal} onHide={handleClose} backdrop="static" keyboard={false}>
-    <Modal.Header closeButton>
-        <Modal.Title>{editingIndex !== null ? 'Edit Task' : 'Add New Task'}</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-        <Form>
-            <Form.Group className="mb-3">
-                <Form.Label>Task Name</Form.Label>
-                <Form.Control
-                    type="text"
-                    name="name"
-                    value={newTodo.name}
-                    onChange={handleInputChange}
-                    placeholder="Enter task name"
-                />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-                <Form.Label>Description</Form.Label>
-                <Form.Control
-                    as="textarea"
-                    rows={3}
-                    name="description"
-                    value={newTodo.description}
-                    onChange={handleInputChange}
-                    placeholder="Enter task description"
-                />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-                <Form.Label>Status</Form.Label>
-                <Form.Select
-                    name="status"
-                    value={newTodo.status}
-                    onChange={handleInputChange}
-                >
-                    <option value="pending">Pending</option>
-                    <option value="completed">Completed</option>
-                </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-                <Form.Label>Priority</Form.Label>
-                <Form.Select
-                    name="priority"
-                    value={newTodo.priority}
-                    onChange={handleInputChange}
-                >
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                </Form.Select>
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-                <Form.Label>Due Date</Form.Label>
-                <Form.Control
-                    type="date"
-                    name="dueDate"
-                    value={newTodo.dueDate}
-                    onChange={handleInputChange}
-                />
-            </Form.Group>
-        </Form>
-    </Modal.Body>
-    <Modal.Footer>
-        <Button variant="secondary" onClick={handleClose}>
-            Cancel
-        </Button>
-        <Button variant="primary" onClick={handleSubmit}>
-            {editingIndex !== null ? 'Save Changes' : 'Add Task'}
-        </Button>
-    </Modal.Footer>
-</Modal>
-
-<Modal 
-    show={showBinModal} 
-    onHide={() => {
-        setShowBinModal(false);
-        setSelectedBinItems([]);
-    }}
-    backdrop="static" 
-    keyboard={false}
-    size="lg"
->
-    <Modal.Header closeButton>
-        <Modal.Title>Recycle Bin</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-        <ListGroup>
-            {deletedTodos.map((todo, index) => (
-                <ListGroup.Item 
-                    key={index}
-                    className="d-flex justify-content-between align-items-center"
-                >
-                    <Form.Check
-                        type="checkbox"
-                        checked={selectedBinItems.includes(index)}
-                        onChange={() => handleBinItemSelect(index)}
-                        label={
-                            <div>
-                                <h6 className="mb-1">{todo.name}</h6>
-                                <small className="text-muted">
-                                    Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
-                                </small>
-                            </div>
-                        }
-                    />
-                    <div>
-                        <Badge 
-                            bg={getPriorityBadgeVariant(todo.priority)}
-                            className="me-2"
-                        >
-                            {todo.priority}
-                        </Badge>
-                        <Badge 
-                            bg={todo.status === 'completed' ? 'success' : 'secondary'}
-                        >
-                            {todo.status}
-                        </Badge>
-                    </div>
-                </ListGroup.Item>
-            ))}
-        </ListGroup>
-    </Modal.Body>
-    <Modal.Footer>
-        <Button 
-            variant="success" 
-            disabled={selectedBinItems.length === 0}
-            onClick={() => setShowRestoreModal(true)}
-        >
-            Restore Selected
-        </Button>
-        <Button 
-            variant="danger" 
-            disabled={selectedBinItems.length === 0}
-            onClick={() => setShowPermanentDeleteModal(true)}
-        >
-            Delete Permanently
-        </Button>
-    </Modal.Footer>
-</Modal>
-
-<Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)} backdrop="static" keyboard={false}>
-    <Modal.Header closeButton>
-        <Modal.Title>Confirm Restore</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-        Are you sure you want to restore {selectedBinItems.length} selected task(s)?
-    </Modal.Body>
-    <Modal.Footer>
-        <Button variant="secondary" onClick={() => setShowRestoreModal(false)}>
-            Cancel
-        </Button>
-        <Button variant="success" onClick={handleRestoreConfirm}>
-            Restore
-        </Button>
-    </Modal.Footer>
-</Modal>
-
-<Modal 
-    show={showPermanentDeleteModal} 
-    onHide={() => setShowPermanentDeleteModal(false)}
-    backdrop="static" 
-    keyboard={false}
->
-    <Modal.Header closeButton>
-        <Modal.Title>Confirm Permanent Deletion</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-        Are you sure you want to permanently delete {selectedBinItems.length} selected task(s)? 
-        This action cannot be undone.
-    </Modal.Body>
-    <Modal.Footer>
-        <Button 
-            variant="secondary" 
-            onClick={() => setShowPermanentDeleteModal(false)}
-        >
-            Cancel
-        </Button>
-        <Button variant="danger" onClick={handlePermanentDeleteConfirm}>
-            Delete Permanently
-        </Button>
-    </Modal.Footer>
-</Modal>
-
-<Modal show={showDeleteModal} onHide={handleCloseDeleteModal} backdrop="static" keyboard={false}>
-    <Modal.Header closeButton>
-        <Modal.Title>Confirm Deletion</Modal.Title>
-    </Modal.Header>
-    <Modal.Body>
-        Are you sure you want to delete this task?
-        {deleteIndex !== null && (
-            <div className="mt-3">
-                <strong>Task: </strong> {todos[deleteIndex].name}
-            </div>
-        )}
-    </Modal.Body>
-    <Modal.Footer>
-        <Button variant="secondary" onClick={handleCloseDeleteModal}>
-            Cancel
-        </Button>
-        <Button variant="danger" onClick={confirmDelete}>
-            Delete Task
-        </Button>
-    </Modal.Footer>
-</Modal>
+                                Upcoming Todos
+                            </h5>
+                            <Calendar
+                                localizer={localizer}
+                                events={getCalendarEvents()}
+                                startAccessor="start"
+                                endAccessor="end"
+                                style={{
+                                    height: '500px',
+                                    borderRadius: '10px',
+                                    padding: '10px',
+                                    background: '#f8f9fa',
+                                }}
+                                components={{
+                                    event: EventComponent,
+                                }}
+                                defaultView="month"
+                                views={['month', 'week', 'day']}
+                                eventPropGetter={(event) => ({
+                                    style: {
+                                        backgroundColor: event.status === 'completed' ? '#4CAF50' : '#2196F3',
+                                        borderRadius: '8px',
+                                        border: 'none',
+                                        color: '#fff',
+                                        padding: '5px',
+                                    },
+                                })}
+                                tooltipAccessor={(event) => `${event.title} - ${event.priority}`}
+                            />
+                        </Card.Body>
+                    </Card>
                 </Col>
             </Row>
+
+            {/* Modals */}
+            <Modal show={showModal} onHide={handleClose} backdrop="static" keyboard={false}>
+                <Modal.Header closeButton>
+                    <Modal.Title>{editingIndex !== null ? 'Edit Task' : 'Add New Task'}</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <Form>
+                        <Form.Group className="mb-3">
+                            <Form.Label>Task Name</Form.Label>
+                            <Form.Control
+                                type="text"
+                                name="name"
+                                value={newTodo.name}
+                                onChange={handleInputChange}
+                                placeholder="Enter task name"
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Description</Form.Label>
+                            <Form.Control
+                                as="textarea"
+                                rows={3}
+                                name="description"
+                                value={newTodo.description}
+                                onChange={handleInputChange}
+                                placeholder="Enter task description"
+                            />
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Status</Form.Label>
+                            <Form.Select
+                                name="status"
+                                value={newTodo.status}
+                                onChange={handleInputChange}
+                            >
+                                <option value="pending">Pending</option>
+                                <option value="completed">Completed</option>
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Priority</Form.Label>
+                            <Form.Select
+                                name="priority"
+                                value={newTodo.priority}
+                                onChange={handleInputChange}
+                            >
+                                <option value="low">Low</option>
+                                <option value="medium">Medium</option>
+                                <option value="high">High</option>
+                            </Form.Select>
+                        </Form.Group>
+
+                        <Form.Group className="mb-3">
+                            <Form.Label>Due Date</Form.Label>
+                            <Form.Control
+                                type="date"
+                                name="dueDate"
+                                value={newTodo.dueDate}
+                                onChange={handleInputChange}
+                            />
+                        </Form.Group>
+                    </Form>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleClose}>
+                        Cancel
+                    </Button>
+                    <Button variant="primary" onClick={handleSubmit}>
+                        {editingIndex !== null ? 'Save Changes' : 'Add Task'}
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal 
+                show={showBinModal} 
+                onHide={() => {
+                    setShowBinModal(false);
+                    setSelectedBinItems([]);
+                }}
+                backdrop="static" 
+                keyboard={false}
+                size="lg"
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Recycle Bin</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <ListGroup>
+                        {deletedTodos.map((todo, index) => (
+                            <ListGroup.Item 
+                                key={index}
+                                className="d-flex justify-content-between align-items-center"
+                            >
+                                <Form.Check
+                                    type="checkbox"
+                                    checked={selectedBinItems.includes(index)}
+                                    onChange={() => handleBinItemSelect(index)}
+                                    label={
+                                        <div>
+                                            <h6 className="mb-1">{todo.name}</h6>
+                                            <small className="text-muted">
+                                                Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
+                                            </small>
+                                        </div>
+                                    }
+                                />
+                                <div>
+                                    <Badge 
+                                        bg={getPriorityBadgeVariant(todo.priority)}
+                                        className="me-2"
+                                    >
+                                        {todo.priority}
+                                    </Badge>
+                                    <Badge 
+                                        bg={todo.status === 'completed' ? 'success' : 'secondary'}
+                                    >
+                                        {todo.status}
+                                    </Badge>
+                                </div>
+                            </ListGroup.Item>
+                        ))}
+                    </ListGroup>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button 
+                        variant="success" 
+                        disabled={selectedBinItems.length === 0}
+                        onClick={() => setShowRestoreModal(true)}
+                    >
+                        Restore Selected
+                    </Button>
+                    <Button 
+                        variant="danger" 
+                        disabled={selectedBinItems.length === 0}
+                        onClick={() => setShowPermanentDeleteModal(true)}
+                    >
+                        Delete Permanently
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)} backdrop="static" keyboard={false}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Restore</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Are you sure you want to restore {selectedBinItems.length} selected task(s)?
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowRestoreModal(false)}>
+                        Cancel
+                    </Button>
+                    <Button variant="success" onClick={handleRestoreConfirm}>
+                        Restore
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal 
+                show={showPermanentDeleteModal} 
+                onHide={() => setShowPermanentDeleteModal(false)}
+                backdrop="static" 
+                keyboard={false}
+            >
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Permanent Deletion</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Are you sure you want to permanently delete {selectedBinItems.length} selected task(s)? 
+                    This action cannot be undone.
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button 
+                        variant="secondary" 
+                        onClick={() => setShowPermanentDeleteModal(false)}
+                    >
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={handlePermanentDeleteConfirm}>
+                        Delete Permanently
+                    </Button>
+                </Modal.Footer>
+            </Modal>
+
+            <Modal show={showDeleteModal} onHide={handleCloseDeleteModal} backdrop="static" keyboard={false}>
+                <Modal.Header closeButton>
+                    <Modal.Title>Confirm Deletion</Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    Are you sure you want to delete this task?
+                    {deleteIndex !== null && (
+                        <div className="mt-3">
+                            <strong>Task: </strong> {todos[deleteIndex].name}
+                        </div>
+                    )}
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={handleCloseDeleteModal}>
+                        Cancel
+                    </Button>
+                    <Button variant="danger" onClick={confirmDelete}>
+                        Delete Task
+                    </Button>
+                </Modal.Footer>
+            </Modal>
         </Container>
     );
 }
