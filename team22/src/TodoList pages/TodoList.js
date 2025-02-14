@@ -123,18 +123,37 @@ function TodoList({ userId }) {
         };
     
         try {
-            await fetch('http://35.214.101.36/ToDoList.php', {
+            const response = await fetch('http://35.214.101.36/ToDoList.php', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            fetchTodos();
-            handleClose();
+    
+            if (response.ok) {
+                if (editingIndex !== null) {
+                    // Update the local state for the edited task
+                    const updatedTodos = [...todos];
+                    updatedTodos[editingIndex] = {
+                        ...updatedTodos[editingIndex],
+                        name: newTodo.name,
+                        description: newTodo.description,
+                        status: newTodo.status,
+                        priority: newTodo.priority,
+                        dueDate: newTodo.dueDate
+                    };
+                    setTodos(updatedTodos);
+                } else {
+                    // If it's a new task, fetch the updated list
+                    fetchTodos();
+                }
+                handleClose();
+            } else {
+                console.error('Error saving task:', response.statusText);
+            }
         } catch (error) {
             console.error('Error saving task:', error);
         }
     };
-
     const toggleTodo = async (index) => {
         const updatedTodo = { ...todos[index] };
         updatedTodo.status = updatedTodo.status === 'Completed' ? 'Pending' : 'Completed';
