@@ -29,11 +29,7 @@ import { Pie } from "react-chartjs-2"
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 
-<<<<<<< HEAD
-const EmpProjectsTasks = ({userId}) => {
-=======
 const EmpProjectsTasks = ( {userId} ) => {
->>>>>>> a2d15bae8a3d5c747f6b9d7b8a8c89af929d76fc
   const [expandedProjects, setExpandedProjects] = useState({})
   const [projects, setProjects] = useState([])
   const [tasks, setTasks] = useState({})
@@ -50,41 +46,19 @@ const EmpProjectsTasks = ( {userId} ) => {
     try {
       const res = await fetch(
         `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getProjects&user_id=${userId}`
-<<<<<<< HEAD
-      );
-      const data = await res.json();
-      console.log("Fetched projects:", data);
-      setProjects(data);
-  
-      // Fetch tasks for each project
-      data.forEach(async (project) => {
-        const tasksRes = await fetch(
-          `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getTasks&project_id=${project.project_id}&user_id=${userId}`
-        );
-        const tasksData = await tasksRes.json();
-        console.log("Fetched tasks for project", project.project_id, ":", tasksData);
-        setTasks((prevTasks) => ({
-          ...prevTasks,
-          [project.project_id]: tasksData,
-        }));
-      });
-  
-      const initialProgressView = {};
-=======
       )
       const data = await res.json()
       console.log("Fetched projects:", data)
       setProjects(data)
       const initialProgressView = {}
->>>>>>> a2d15bae8a3d5c747f6b9d7b8a8c89af929d76fc
       data.forEach((project) => {
-        initialProgressView[project.project_id] = "user";
-      });
-      setProgressView(initialProgressView);
+        initialProgressView[project.project_id] = "user"
+      })
+      setProgressView(initialProgressView)
     } catch (err) {
-      console.error("Error fetching projects:", err);
+      console.error("Error fetching projects:", err)
     }
-  }, [userId]);
+  }, [])
 
   // Fetch tasks for a specific project for the current user
   const fetchTasks = useCallback(async (projectId) => {
@@ -543,5 +517,3 @@ const EmpProjectsTasks = ( {userId} ) => {
 }
 
 export default EmpProjectsTasks
-
-
