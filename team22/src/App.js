@@ -59,7 +59,11 @@ function App() {
               {userRole === "Employee" && (
                 <>
                   <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
+<<<<<<< HEAD
                   <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId} />} />
+=======
+                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId}/>} />
+>>>>>>> a2d15bae8a3d5c747f6b9d7b8a8c89af929d76fc
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>

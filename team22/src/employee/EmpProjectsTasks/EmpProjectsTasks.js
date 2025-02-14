@@ -29,7 +29,11 @@ import { Pie } from "react-chartjs-2"
 ChartJS.register(ArcElement, Tooltip, Legend)
 
 
+<<<<<<< HEAD
 const EmpProjectsTasks = ({userId}) => {
+=======
+const EmpProjectsTasks = ( {userId} ) => {
+>>>>>>> a2d15bae8a3d5c747f6b9d7b8a8c89af929d76fc
   const [expandedProjects, setExpandedProjects] = useState({})
   const [projects, setProjects] = useState([])
   const [tasks, setTasks] = useState({})
@@ -46,6 +50,7 @@ const EmpProjectsTasks = ({userId}) => {
     try {
       const res = await fetch(
         `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getProjects&user_id=${userId}`
+<<<<<<< HEAD
       );
       const data = await res.json();
       console.log("Fetched projects:", data);
@@ -65,6 +70,13 @@ const EmpProjectsTasks = ({userId}) => {
       });
   
       const initialProgressView = {};
+=======
+      )
+      const data = await res.json()
+      console.log("Fetched projects:", data)
+      setProjects(data)
+      const initialProgressView = {}
+>>>>>>> a2d15bae8a3d5c747f6b9d7b8a8c89af929d76fc
       data.forEach((project) => {
         initialProgressView[project.project_id] = "user";
       });
