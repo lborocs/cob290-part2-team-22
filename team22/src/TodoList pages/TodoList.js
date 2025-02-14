@@ -41,11 +41,13 @@ function TodoList({ userId }) {
         try {
             const response = await fetch(`http://35.214.101.36/ToDoList.php?user_id=${userId}`);
             const data = await response.json();
-    
+            console.log(data);
             const formattedData = data.map(task => ({
                 ...task,
                 name: task.title || '',
                 dueDate: task.due_date || '',
+                status: task.status?.toLowerCase() || 'pending',
+                priority: task.priority?.toLowerCase() || 'low'
             }));
     
             setTodos(formattedData);
@@ -143,10 +145,19 @@ function TodoList({ userId }) {
                     };
                     setTodos(updatedTodos);
                 } else {
-                    // If it's a new task, fetch the updated list
-                    fetchTodos();
+                    // If it's a new task, add it to the local state immediately
+                    const newTask = {
+                        todo_id: Date.now(), // Temporary ID until the backend responds
+                        name: newTodo.name,
+                        description: newTodo.description,
+                        status: newTodo.status,
+                        priority: newTodo.priority,
+                        dueDate: newTodo.dueDate
+                    };
+                    setTodos([...todos, newTask]);
                 }
                 handleClose();
+                fetchTodos(); // Refresh the list to get the correct data from the backend
             } else {
                 console.error('Error saving task:', response.statusText);
             }
@@ -154,9 +165,10 @@ function TodoList({ userId }) {
             console.error('Error saving task:', error);
         }
     };
+
     const toggleTodo = async (index) => {
         const updatedTodo = { ...todos[index] };
-        updatedTodo.status = updatedTodo.status === 'Completed' ? 'Pending' : 'Completed';
+        updatedTodo.status = updatedTodo.status === 'completed' ? 'pending' : 'completed';
         
         try {
             await fetch('http://35.214.101.36/ToDoList.php', {
@@ -164,7 +176,7 @@ function TodoList({ userId }) {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     todo_id: updatedTodo.todo_id,
-                    status: updatedTodo.status
+                    status: updatedTodo.status.charAt(0).toUpperCase() + updatedTodo.status.slice(1)
                 })
             });
     
@@ -242,8 +254,8 @@ function TodoList({ userId }) {
     };
 
     const filteredTodos = todos.filter(todo => {
-        const priorityMatch = filters.priority === 'all' || todo.priority === filters.priority;
-        const statusMatch = filters.status === 'all' || todo.status === filters.status;
+        const priorityMatch = filters.priority === 'all' || todo.priority === filters.priority.toLowerCase();
+        const statusMatch = filters.status === 'all' || todo.status === filters.status.toLowerCase();
         return priorityMatch && statusMatch;
     });
 
@@ -313,22 +325,22 @@ function TodoList({ userId }) {
                             <ListGroup>
                                 {filteredTodos.map((todo, index) => (
                                     <ListGroup.Item 
-                                        key={index} 
-                                        className="d-flex justify-content-between align-items-start py-3 border-left border-3"
-                                        style={{
-                                            borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
-                                                            todo.priority === 'medium' ? '#ffc107' : '#17a2b8'
-                                        }}
+                                    key={index} 
+                                    className="d-flex justify-content-between align-items-start py-3 border-left border-3"
+                                    style={{
+                                        borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
+                                                        todo.priority === 'medium' ? '#ffc107' : '#17a2b8'
+                                    }}
                                     >
                                         <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
                                             <div className="d-flex align-items-center">
                                                 <Form.Check 
                                                     type="checkbox"
-                                                    checked={todo.status === 'Completed'}
+                                                    checked={todo.status === 'completed'}
                                                     onChange={() => toggleTodo(index)}
                                                     className="me-2"
                                                 />
-                                                <h5 className={`mb-1 ${todo.status === 'Completed' ? 'text-muted text-decoration-line-through' : ''}`}>
+                                                <h5 className={`mb-1 ${todo.status === 'completed' ? 'text-muted text-decoration-line-through' : ''}`}>
                                                     {todo.name}
                                                 </h5>
                                                 <Badge 
@@ -338,7 +350,7 @@ function TodoList({ userId }) {
                                                     {todo.priority}
                                                 </Badge>
                                                 <Badge 
-                                                    bg={todo.status === 'Completed' ? 'success' : 'secondary'}
+                                                    bg={todo.status === 'completed' ? 'success' : 'secondary'}
                                                     className="ms-2"
                                                 >
                                                     {todo.status}
