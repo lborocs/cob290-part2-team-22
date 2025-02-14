@@ -267,16 +267,17 @@ function TodoList({ userId }) {
     };
 
     return (
-        <Container className="mt-5">
+        <Container className="mt-5" style={{ maxWidth: '1200px' }}>
             <Row className="justify-content-md-center">
-                <Col md={10}>
+                <Col md={12}>
                     <div className="d-flex justify-content-between align-items-center mb-4">
-                        <h1 className="display-4">To-do List</h1>
+                        <h1 className="display-4" style={{ fontWeight: '600', color: '#2c3e50' }}>To-do List</h1>
                         <div>
                             <Button 
                                 variant="outline-primary" 
                                 className="me-2"
                                 onClick={() => setShowCharts(!showCharts)}
+                                style={{ borderRadius: '20px', padding: '8px 20px', fontWeight: '500' }}
                             >
                                 {showCharts ? 'List View' : 'Charts View'}
                             </Button>
@@ -284,10 +285,15 @@ function TodoList({ userId }) {
                                 variant="outline-secondary" 
                                 className="me-2"
                                 onClick={() => setShowBinModal(true)}
+                                style={{ borderRadius: '20px', padding: '8px 20px', fontWeight: '500' }}
                             >
                                 🗑️ Bin ({deletedTodos.length})
                             </Button>
-                            <Button variant="primary" onClick={() => handleShow()}>
+                            <Button 
+                                variant="primary" 
+                                onClick={() => handleShow()}
+                                style={{ borderRadius: '20px', padding: '8px 20px', fontWeight: '500' }}
+                            >
                                 Add New Task
                             </Button>
                         </div>
@@ -299,7 +305,7 @@ function TodoList({ userId }) {
                         <>
                             <div className="mb-4 d-flex gap-3">
                                 <Dropdown>
-                                    <Dropdown.Toggle variant="outline-primary">
+                                    <Dropdown.Toggle variant="outline-primary" style={{ borderRadius: '20px', padding: '8px 20px', fontWeight: '500' }}>
                                         Priority: {filters.priority === 'all' ? 'All' : filters.priority}
                                     </Dropdown.Toggle>
                                     <Dropdown.Menu>
@@ -311,7 +317,7 @@ function TodoList({ userId }) {
                                 </Dropdown>
 
                                 <Dropdown>
-                                    <Dropdown.Toggle variant="outline-primary">
+                                    <Dropdown.Toggle variant="outline-primary" style={{ borderRadius: '20px', padding: '8px 20px', fontWeight: '500' }}>
                                         Status: {filters.status === 'all' ? 'All' : filters.status}
                                     </Dropdown.Toggle>
                                     <Dropdown.Menu>
@@ -325,12 +331,19 @@ function TodoList({ userId }) {
                             <ListGroup>
                                 {filteredTodos.map((todo, index) => (
                                     <ListGroup.Item 
-                                    key={index} 
-                                    className="d-flex justify-content-between align-items-start py-3 border-left border-3"
-                                    style={{
-                                        borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
-                                                        todo.priority === 'medium' ? '#ffc107' : '#17a2b8'
-                                    }}
+                                        key={index} 
+                                        className="d-flex justify-content-between align-items-start py-3 border-left border-3"
+                                        style={{
+                                            borderLeftColor: todo.priority === 'high' ? '#dc3545' : 
+                                                            todo.priority === 'medium' ? '#ffc107' : '#17a2b8',
+                                            borderRadius: '10px',
+                                            marginBottom: '10px',
+                                            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+                                            transition: 'transform 0.2s, box-shadow 0.2s',
+                                            cursor: 'pointer'
+                                        }}
+                                        onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                                        onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
                                     >
                                         <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
                                             <div className="d-flex align-items-center">
@@ -346,12 +359,14 @@ function TodoList({ userId }) {
                                                 <Badge 
                                                     bg={getPriorityBadgeVariant(todo.priority)}
                                                     className="ms-2"
+                                                    style={{ borderRadius: '10px', padding: '5px 10px' }}
                                                 >
                                                     {todo.priority}
                                                 </Badge>
                                                 <Badge 
                                                     bg={todo.status === 'completed' ? 'success' : 'secondary'}
                                                     className="ms-2"
+                                                    style={{ borderRadius: '10px', padding: '5px 10px' }}
                                                 >
                                                     {todo.status}
                                                 </Badge>
@@ -367,6 +382,7 @@ function TodoList({ userId }) {
                                                 size="sm" 
                                                 onClick={() => handleShow(index)}
                                                 className="me-2"
+                                                style={{ borderRadius: '20px', padding: '5px 15px' }}
                                             >
                                                 Edit
                                             </Button>
@@ -374,6 +390,7 @@ function TodoList({ userId }) {
                                                 variant="outline-danger" 
                                                 size="sm" 
                                                 onClick={() => handleShowDeleteModal(index)}
+                                                style={{ borderRadius: '20px', padding: '5px 15px' }}
                                             >
                                                 Delete
                                             </Button>
