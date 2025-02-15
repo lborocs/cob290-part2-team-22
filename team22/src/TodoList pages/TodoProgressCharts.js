@@ -45,7 +45,10 @@ const TodoProgressCharts = ({ userId }) => {
                     ? ['#4CAF50', '#C8E6C9']
                     : priorityLevel === 'medium'
                     ? ['#FFC107', '#FFE082']
-                    : ['#F44336', '#FFCDD2']
+                    : ['#F44336', '#FFCDD2'],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 10
             }]
         };
 
@@ -54,14 +57,42 @@ const TodoProgressCharts = ({ userId }) => {
             data: data,
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     title: {
                         display: true,
-                        text: `${priorityLevel.charAt(0).toUpperCase() + priorityLevel.slice(1)} Priority Tasks`
+                        text: `${priorityLevel.charAt(0).toUpperCase() + priorityLevel.slice(1)} Priority Tasks`,
+                        font: {
+                            size: 16,
+                            weight: '500'
+                        }
                     },
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 14,
+                                weight: '500'
+                            },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: '500'
+                        },
+                        bodyFont: {
+                            size: 14,
+                            weight: '500'
+                        }
                     }
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
                 }
             }
         });
@@ -76,7 +107,10 @@ const TodoProgressCharts = ({ userId }) => {
             labels: ['Completed', 'Pending'],
             datasets: [{
                 data: [overallData.completed, overallData.pending],
-                backgroundColor: ['#2196F3', '#FF9800']
+                backgroundColor: ['#2196F3', '#FF9800'],
+                borderColor: '#ffffff',
+                borderWidth: 2,
+                hoverOffset: 10
             }]
         };
 
@@ -85,14 +119,42 @@ const TodoProgressCharts = ({ userId }) => {
             data: data,
             options: {
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
                     title: {
                         display: true,
-                        text: 'Overall Task Progress'
+                        text: 'Overall Task Progress',
+                        font: {
+                            size: 16,
+                            weight: '500'
+                        }
                     },
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            font: {
+                                size: 14,
+                                weight: '500'
+                            },
+                            padding: 20
+                        }
+                    },
+                    tooltip: {
+                        enabled: true,
+                        backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                        titleFont: {
+                            size: 14,
+                            weight: '500'
+                        },
+                        bodyFont: {
+                            size: 14,
+                            weight: '500'
+                        }
                     }
+                },
+                animation: {
+                    animateScale: true,
+                    animateRotate: true
                 }
             }
         });
@@ -114,24 +176,24 @@ const TodoProgressCharts = ({ userId }) => {
 
     return (
         <Container>
-            <h2 className="text-center my-4">Task Progress Visualization</h2>
+            <h2 className="text-center my-4" style={{ fontWeight: '600', color: '#2c3e50' }}>Task Progress Visualization</h2>
             <Row>
                 <Col md={4}>
-                    <Card className="mb-4">
+                    <Card className="mb-4" style={{ borderRadius: '15px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                         <Card.Body>
                             <canvas ref={lowPriorityChartRef}></canvas>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={4}>
-                    <Card className="mb-4">
+                    <Card className="mb-4" style={{ borderRadius: '15px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                         <Card.Body>
                             <canvas ref={mediumPriorityChartRef}></canvas>
                         </Card.Body>
                     </Card>
                 </Col>
                 <Col md={4}>
-                    <Card className="mb-4">
+                    <Card className="mb-4" style={{ borderRadius: '15px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                         <Card.Body>
                             <canvas ref={highPriorityChartRef}></canvas>
                         </Card.Body>
@@ -140,7 +202,7 @@ const TodoProgressCharts = ({ userId }) => {
             </Row>
             <Row className="justify-content-center">
                 <Col md={6}>
-                    <Card className="mb-4">
+                    <Card className="mb-4" style={{ borderRadius: '15px', boxShadow: '0 4px 6px rgba(0, 0, 0, 0.1)' }}>
                         <Card.Body>
                             <canvas ref={overallChartRef}></canvas>
                         </Card.Body>

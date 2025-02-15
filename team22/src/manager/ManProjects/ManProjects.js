@@ -16,7 +16,9 @@ import {
 } from 'react-bootstrap'
 import { Pie } from 'react-chartjs-2'
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from 'chart.js'
-import { FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff, FiPlus, FiCheckCircle, FiXCircle } from 'react-icons/fi'
+import { 
+  FiPieChart, FiEdit, FiTrash2, FiArchive, FiEye, FiEyeOff, FiPlus, FiCheckCircle, FiXCircle 
+} from 'react-icons/fi'
 
 ChartJS.register(ArcElement, Tooltip, Legend)
 
@@ -46,6 +48,9 @@ const ManProjects = () => {
   const [projects, setProjects] = useState([])
   const [users, setUsers] = useState([])
   const [formData, setFormData] = useState(initialFormData)
+  // New filtering states:
+  const [selectedTeamLeaders, setSelectedTeamLeaders] = useState([])
+  const [deadlineDays, setDeadlineDays] = useState("")
 
   const fetchUsers = async () => {
     try {
@@ -72,14 +77,45 @@ const ManProjects = () => {
     fetchProjects()
   }, [])
 
+  // When projects update, update the selectedTeamLeaders filter
+  // Remove any team leader ID that no longer appears in any project.
+  useEffect(() => {
+    setSelectedTeamLeaders(prev =>
+      prev.filter(
+        id => projects.some(project => project.team_leader_id == id)
+      )
+    )
+  }, [projects])
+
   const getProjectStatus = (project) => {
     if (parseInt(project.binned) === 1) return 'binned'
     if (parseInt(project.completed) === 1) return 'completed'
     return 'active'
   }
 
+  // Group projects by status after applying team leader and deadline filters.
   const groupProjectsByStatus = () => {
-    return projects.reduce((acc, project) => {
+    let filteredProjects = projects
+
+    // Filter by team leaders (only show those that are currently leading at least one project)
+    if (selectedTeamLeaders.length > 0) {
+      filteredProjects = filteredProjects.filter(
+        project => selectedTeamLeaders.includes(project.team_leader_id.toString())
+      )
+    }
+
+    // Filter by deadline if a valid number of days is specified
+    if (deadlineDays && !isNaN(deadlineDays) && parseInt(deadlineDays) > 0) {
+      const now = new Date()
+      const deadlineCutoff = new Date()
+      deadlineCutoff.setDate(now.getDate() + parseInt(deadlineDays))
+      filteredProjects = filteredProjects.filter(project => {
+        const projectDeadline = new Date(project.deadline)
+        return projectDeadline >= now && projectDeadline <= deadlineCutoff
+      })
+    }
+
+    return filteredProjects.reduce((acc, project) => {
       const status = getProjectStatus(project)
       acc[status] = acc[status] || []
       acc[status].push(project)
@@ -144,7 +180,9 @@ const ManProjects = () => {
         body: JSON.stringify(payload),
       })
       await res.json()
+      // Refresh both projects and users so that the filtering dropdown updates immediately.
       fetchProjects()
+      fetchUsers()
     } catch (err) {
       console.error('Error saving project', err)
     }
@@ -253,9 +291,64 @@ const ManProjects = () => {
     }))
   }
 
+  // Handler for team leader filter (multiple selection) in the filtering dropdown.
+  // This dropdown now shows only users with role "team leader" who have at least one project.
+  const handleTeamLeaderFilterChange = (e) => {
+    const selected = Array.from(e.target.selectedOptions, option => option.value)
+    setSelectedTeamLeaders(selected)
+  }
+
+  // Compute the available team leaders for filtering based on current projects.
+  const availableTeamLeaders = users.filter(
+    user =>
+      user.role &&
+      user.role.toLowerCase() === "team leader" &&
+      projects.some(project => project.team_leader_id == user.user_id)
+  )
+
   return (
     <Container fluid className="py-4 bg-light">
       <h1 className="text-center mb-4">Projects Management Dashboard</h1>
+
+      {/* New Filtering Options */}
+      <Form className="mb-4">
+        <Row>
+          <Col md={4}>
+            <Form.Group controlId="teamLeaderFilter">
+              <Form.Label>Filter by Team Leader</Form.Label>
+              <Form.Select 
+                multiple 
+                value={selectedTeamLeaders} 
+                onChange={handleTeamLeaderFilterChange}
+              >
+                {availableTeamLeaders.map(user => (
+                  <option key={user.user_id} value={user.user_id}>
+                    {user.name}
+                  </option>
+                ))}
+              </Form.Select>
+              <Form.Text className="text-muted">
+                Hold CTRL/CMD to select multiple team leaders.
+              </Form.Text>
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group controlId="deadlineFilter">
+              <Form.Label>Deadline Filter (days)</Form.Label>
+              <Form.Control 
+                type="number" 
+                min="1"
+                placeholder="Enter number of days" 
+                value={deadlineDays} 
+                onChange={(e) => setDeadlineDays(e.target.value)}
+              />
+              <Form.Text className="text-muted">
+                Show projects due within the entered number of days.
+              </Form.Text>
+            </Form.Group>
+          </Col>
+        </Row>
+      </Form>
 
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <div className="mb-2 mb-md-0">
@@ -459,15 +552,15 @@ const ManProjects = () => {
                         </Card.Text>
 
                         <h6 className="small">Assigned Team</h6>
-                          <div className="mb-3">
-                            {project.employees &&
-                              project.employees.map((emp, idx) => (
-                                <Badge key={idx} bg="secondary" className="me-1 mb-1">
-                                  {getUserName(emp)}
-                                </Badge>
-                              ))
-                            }
-                          </div>
+                        <div className="mb-3">
+                          {project.employees &&
+                            project.employees.map((emp, idx) => (
+                              <Badge key={idx} bg="secondary" className="me-1 mb-1">
+                                {getUserName(emp)}
+                              </Badge>
+                            ))
+                          }
+                        </div>
 
                         <h6 className="small">Tasks</h6>
                         <ListGroup variant="flush">
@@ -546,6 +639,7 @@ const ManProjects = () => {
                 onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
               >
                 <option value="">Select Team Leader</option>
+                {/* In the modal, show all employees except managers */}
                 {users
                   .filter(user => user.role && user.role.toLowerCase() !== "manager")
                   .map(user => (

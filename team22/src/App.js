@@ -51,14 +51,15 @@ function App() {
           {/* Main Content */}
           <div
             className="flex-grow-1"
-            style={{ marginLeft: '250px', padding: '20px', minHeight: '100vh' }}
+            //style={{ marginLeft: '250px', padding: '20px', minHeight: '100vh' }}
+            style={{ paddingTop: '5rem', paddingLeft: '20px', paddingRight: '20px' }}
           >
             <Routes>
               {/* Employee Routes */}
               {userRole === "Employee" && (
                 <>
                   <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
-                  <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
+                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId}/>} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
