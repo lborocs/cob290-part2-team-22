@@ -49,8 +49,12 @@ const ManProjects = () => {
   const [users, setUsers] = useState([])
   const [formData, setFormData] = useState(initialFormData)
   // New filtering states:
-  const [selectedTeamLeaders, setSelectedTeamLeaders] = useState([])
+  const [selectedTeamLeader, setSelectedTeamLeader] = useState(null); 
   const [deadlineDays, setDeadlineDays] = useState("")
+  const [selectedPriority, setSelectedPriority] = useState("");
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
 
   const fetchUsers = async () => {
     try {
@@ -79,14 +83,7 @@ const ManProjects = () => {
 
   // When projects update, update the selectedTeamLeaders filter
   // Remove any team leader ID that no longer appears in any project.
-  useEffect(() => {
-    setSelectedTeamLeaders(prev =>
-      prev.filter(
-        id => projects.some(project => project.team_leader_id == id)
-      )
-    )
-  }, [projects])
-
+  
   const getProjectStatus = (project) => {
     if (parseInt(project.binned) === 1) return 'binned'
     if (parseInt(project.completed) === 1) return 'completed'
@@ -95,33 +92,43 @@ const ManProjects = () => {
 
   // Group projects by status after applying team leader and deadline filters.
   const groupProjectsByStatus = () => {
-    let filteredProjects = projects
-
-    // Filter by team leaders (only show those that are currently leading at least one project)
-    if (selectedTeamLeaders.length > 0) {
+    let filteredProjects = projects;
+  
+    // Filter by team leader
+    if (selectedTeamLeader) {
       filteredProjects = filteredProjects.filter(
-        project => selectedTeamLeaders.includes(project.team_leader_id.toString())
-      )
+        (project) => project.team_leader_id.toString() === selectedTeamLeader
+      );
     }
-
-    // Filter by deadline if a valid number of days is specified
-    if (deadlineDays && !isNaN(deadlineDays) && parseInt(deadlineDays) > 0) {
-      const now = new Date()
-      const deadlineCutoff = new Date()
-      deadlineCutoff.setDate(now.getDate() + parseInt(deadlineDays))
-      filteredProjects = filteredProjects.filter(project => {
-        const projectDeadline = new Date(project.deadline)
-        return projectDeadline >= now && projectDeadline <= deadlineCutoff
-      })
+  
+    // Filter by priority
+    if (selectedPriority) {
+      filteredProjects = filteredProjects.filter(
+        (project) => project.priority === selectedPriority
+      );
     }
-
+  
+    // Filter by deadline range
+    if (startDate || endDate) {
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+  
+      filteredProjects = filteredProjects.filter((project) => {
+        const projectDeadline = new Date(project.deadline);
+        return (
+          (!start || projectDeadline >= start) &&
+          (!end || projectDeadline <= end)
+        );
+      });
+    }
+  
     return filteredProjects.reduce((acc, project) => {
-      const status = getProjectStatus(project)
-      acc[status] = acc[status] || []
-      acc[status].push(project)
-      return acc
-    }, {})
-  }
+      const status = getProjectStatus(project);
+      acc[status] = acc[status] || [];
+      acc[status].push(project);
+      return acc;
+    }, {});
+  };
 
   const getStatusBadge = (status) => {
     switch(status) {
@@ -293,10 +300,8 @@ const ManProjects = () => {
 
   // Handler for team leader filter (multiple selection) in the filtering dropdown.
   // This dropdown now shows only users with role "team leader" who have at least one project.
-  const handleTeamLeaderFilterChange = (e) => {
-    const selected = Array.from(e.target.selectedOptions, option => option.value)
-    setSelectedTeamLeaders(selected)
-  }
+ 
+ 
 
   // Compute the available team leaders for filtering based on current projects.
   const availableTeamLeaders = users.filter(
@@ -304,7 +309,7 @@ const ManProjects = () => {
       user.role &&
       user.role.toLowerCase() === "team leader" &&
       projects.some(project => project.team_leader_id == user.user_id)
-  )
+  );
 
   return (
     <Container fluid className="py-4 bg-light">
@@ -314,37 +319,80 @@ const ManProjects = () => {
       <Form className="mb-4">
         <Row>
           <Col md={4}>
-            <Form.Group controlId="teamLeaderFilter">
+            <Form.Group controlId="teamLeaderFilter" className="mb-3">
               <Form.Label>Filter by Team Leader</Form.Label>
-              <Form.Select 
-                multiple 
-                value={selectedTeamLeaders} 
-                onChange={handleTeamLeaderFilterChange}
-              >
-                {availableTeamLeaders.map(user => (
-                  <option key={user.user_id} value={user.user_id}>
-                    {user.name}
-                  </option>
-                ))}
-              </Form.Select>
-              <Form.Text className="text-muted">
-                Hold CTRL/CMD to select multiple team leaders.
-              </Form.Text>
+              <div className="d-flex gap-2">
+                <Form.Select
+                  value={selectedTeamLeader || ""}
+                  onChange={(e) => setSelectedTeamLeader(e.target.value || null)}
+                >
+                  <option value="">All Team Leaders</option>
+                  {availableTeamLeaders.map((user) => (
+                    <option key={user.user_id} value={user.user_id}>
+                      {user.name}
+                    </option>
+                  ))}
+                </Form.Select>
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setSelectedTeamLeader(null)}
+                  disabled={!selectedTeamLeader}
+                >
+                  Clear
+                </Button>
+              </div>
             </Form.Group>
           </Col>
           <Col md={4}>
-            <Form.Group controlId="deadlineFilter">
-              <Form.Label>Deadline Filter (days)</Form.Label>
-              <Form.Control 
-                type="number" 
-                min="1"
-                placeholder="Enter number of days" 
-                value={deadlineDays} 
-                onChange={(e) => setDeadlineDays(e.target.value)}
-              />
-              <Form.Text className="text-muted">
-                Show projects due within the entered number of days.
-              </Form.Text>
+            <Form.Group controlId="priorityFilter" className="mb-3">
+              <Form.Label>Filter by Priority</Form.Label>
+              <div className="d-flex gap-2">
+                <Form.Select
+                  value={selectedPriority}
+                  onChange={(e) => setSelectedPriority(e.target.value)}
+                >
+                  <option value="">All Priorities</option>
+                  <option value="Low">Low</option>
+                  <option value="Medium">Medium</option>
+                  <option value="High">High</option>
+                </Form.Select>
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => setSelectedPriority("")}
+                  disabled={!selectedPriority}
+                >
+                  Clear
+                </Button>
+              </div>
+            </Form.Group>
+          </Col>
+          <Col md={4}>
+            <Form.Group controlId="deadlineFilter" className="mb-3">
+              <Form.Label>Filter by Deadline</Form.Label>
+              <div className="d-flex gap-2">
+                <Form.Control
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  placeholder="Start Date"
+                />
+                <Form.Control
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  placeholder="End Date"
+                />
+                <Button
+                  variant="outline-secondary"
+                  onClick={() => {
+                    setStartDate("");
+                    setEndDate("");
+                  }}
+                  disabled={!startDate && !endDate}
+                >
+                  Clear
+                </Button>
+              </div>
             </Form.Group>
           </Col>
         </Row>
