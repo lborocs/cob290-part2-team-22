@@ -45,7 +45,6 @@ function TodoList({ userId }) {
   const [newTodo, setNewTodo] = useState({
     name: "",
     description: "",
-    status: "pending",
     priority: "low",
     dueDate: "",
   })
@@ -243,7 +242,9 @@ function TodoList({ userId }) {
       user_id: userId,
       title: newTodo.name,
       description: newTodo.description,
-      status: newTodo.status.charAt(0).toUpperCase() + newTodo.status.slice(1),
+      status: editingIndex !== null 
+      ? newTodo.status.charAt(0).toUpperCase() + newTodo.status.slice(1)
+      : "Pending", // Force "Pending" for new tasks
       priority: newTodo.priority.charAt(0).toUpperCase() + newTodo.priority.slice(1),
       due_date: newTodo.dueDate,
     };
@@ -699,18 +700,6 @@ function TodoList({ userId }) {
                 onChange={handleInputChange}
                 placeholder="Enter task description"
                 />
-            </Form.Group>
-
-            <Form.Group className="mb-3">
-                <Form.Label>Status</Form.Label>
-                <Form.Select
-                name="status"
-                value={newTodo.status}
-                onChange={handleInputChange}
-                >
-                <option value="pending">Pending</option>
-                <option value="completed">Completed</option>
-                </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
