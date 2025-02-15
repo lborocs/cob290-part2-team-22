@@ -26,6 +26,7 @@ const localizer = momentLocalizer(moment)
 function TodoList({ userId }) {
   const [todos, setTodos] = useState([])
   const [selectedTodos, setSelectedTodos] = useState([]);
+  const [currentDate, setCurrentDate] = useState(new Date());
   const [deletedTodos, setDeletedTodos] = useState([])
   const [showModal, setShowModal] = useState(false)
   const [showDeleteModal, setShowDeleteModal] = useState(false)
@@ -48,6 +49,18 @@ function TodoList({ userId }) {
     priority: "low",
     dueDate: "",
   })
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  // Handle month change
+  const handleMonthChange = (monthIndex) => {
+    const newDate = new Date(currentDate);
+    newDate.setMonth(monthIndex);
+    setCurrentDate(newDate);
+  };
 
   // Fetch todos from the backend
   useEffect(() => {
@@ -291,7 +304,6 @@ function TodoList({ userId }) {
       console.error("Error updating task status:", error);
     }
   };
-
 
 
   const toggleTodo = async (index) => {
@@ -589,13 +601,29 @@ function TodoList({ userId }) {
               >
                 Upcoming Todos
               </h5>
+
+              {/* Month Selector Dropdown */}
+              <Dropdown className="mb-3">
+                <Dropdown.Toggle variant="outline-primary" style={{ borderRadius: "20px", padding: "8px 20px", fontWeight: "500" }}>
+                  {monthNames[currentDate.getMonth()]} {/* Display current month */}
+                </Dropdown.Toggle>
+                <Dropdown.Menu>
+                  {monthNames.map((month, index) => (
+                    <Dropdown.Item key={index} onClick={() => handleMonthChange(index)}>
+                      {month}
+                    </Dropdown.Item>
+                  ))}
+                </Dropdown.Menu>
+              </Dropdown>
+
+              {/* Calendar */}
               <Calendar
                 localizer={localizer}
                 events={getCalendarEvents()}
                 startAccessor="start"
                 endAccessor="end"
                 style={{
-                  height: "500px",
+                  height: "700px", // Increased height
                   borderRadius: "10px",
                   padding: "10px",
                   background: "#f8f9fa",
@@ -615,6 +643,8 @@ function TodoList({ userId }) {
                   },
                 })}
                 tooltipAccessor={(event) => `${event.title} - ${event.priority}`}
+                date={currentDate} // Set the current date
+                onNavigate={(newDate) => setCurrentDate(newDate)} // Handle month navigation
               />
             </Card.Body>
           </Card>
