@@ -39,33 +39,25 @@ function App() {
 
   return (
     <Router>
-      {userRole ? (
+      {userRole && userId ? ( // Ensure both userRole and userId are set
         <div className="d-flex">
-          {/* Sidebar */}
           {userRole === "Manager" ? (
             <ManNavbar setUserRole={setUserRole} setUserId={setUserId} userId={userId} />
           ) : (
             <EmpNavbar setUserRole={setUserRole} setUserId={setUserId} userId={userId} />
           )}
-
-          {/* Main Content */}
-          <div
-            className="flex-grow-1"
-            //style={{ marginLeft: '250px', padding: '20px', minHeight: '100vh' }}
-            style={{ paddingTop: '5rem', paddingLeft: '20px', paddingRight: '20px' }}
-          >
+  
+          <div className="flex-grow-1" style={{ paddingTop: "5rem", paddingLeft: "20px", paddingRight: "20px" }}>
             <Routes>
-              {/* Employee Routes */}
               {userRole === "Employee" && (
                 <>
                   <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
-                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId}/>} />
+                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId} />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
-
-              {/* Manager Routes */}
+  
               {userRole === "Manager" && (
                 <>
                   <Route path="/" element={<ManHome userId={userId} userRole={userRole} />} />
@@ -76,24 +68,21 @@ function App() {
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
-
-              {/* Team Leader Routes */}
+  
               {userRole === "Team Leader" && (
                 <>
                   <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
-                  <Route path="/projects-tasks" element={<EmpProjectsTasks />} />
+                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId} />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
               )}
-
-              {/* Redirect unknown routes */}
+  
               <Route path="*" element={<Navigate to={window.location.pathname} replace />} />
             </Routes>
           </div>
         </div>
       ) : (
-        // When there is no user role, show login page
         <Routes>
           <Route
             path="/"
@@ -102,6 +91,8 @@ function App() {
                 onLoginSuccess={(role, id) => {
                   setUserRole(role);
                   setUserId(id);
+                  localStorage.setItem("userRole", role);
+                  localStorage.setItem("userId", id);
                 }}
               />
             }
@@ -109,7 +100,7 @@ function App() {
         </Routes>
       )}
     </Router>
-  );
+  );  
 }
 
 export default App;

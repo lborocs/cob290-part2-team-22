@@ -40,66 +40,217 @@ const EmpProjectsTasks = ( {userId} ) => {
   })
   const [showProgressModal, setShowProgressModal] = useState(false)
   const [progressView, setProgressView] = useState({})
+  const [teamLeaders, setTeamLeaders] = useState({});
+  const isTeamLeader = (projectId) => {
+    const leaderId = teamLeaders[projectId];
+    console.log(`Checking isTeamLeader for project ${projectId} ->`, leaderId, "==", userId);
+    return Number(leaderId) === Number(userId);
+  };
+  const [projectUsersTasks, setProjectUsersTasks] = useState([]);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedProject, setSelectedProject] = useState(null);
+
+  const fetchProjectUsersTasks = async (projectId) => {
+    try {
+        console.log(`Fetching users and tasks for project ${projectId}...`);
+
+        const res = await fetch(`http://35.214.101.36/ProjTasks.php?action=getAllProjectsTasks&project_id=${projectId}`);
+
+        if (!res.ok) {
+            throw new Error(`Server error: ${res.status}`);
+        }
+
+        const text = await res.text(); // Read response as text first
+        console.log("Raw response:", text);
+
+        if (!text.trim()) {
+            console.warn("Empty response received.");
+            setProjectUsersTasks([]); // Set empty array instead of failing
+        } else {
+            const data = JSON.parse(text); // Parse response
+            console.log("Fetched users and tasks:", data);
+            setProjectUsersTasks(data);
+        }
+
+        setShowEditModal(true); // Ensure modal always opens
+
+    } catch (error) {
+        console.error("Error fetching project users and tasks:", error);
+        setShowEditModal(true); // Open modal even if fetching fails (shows empty state)
+    }
+};
+
+const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject }) => {
+  console.log("Rendering modal with usersTasks:", usersTasks);
+  
+  if (!Array.isArray(usersTasks)) {
+    console.error("usersTasks is not an array:", usersTasks);
+    return null;
+  }
+  
+  return (
+      <Modal show={show} onHide={handleClose} size="lg">
+          <Modal.Header closeButton>
+              <Modal.Title>Project Users & Tasks</Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+              {usersTasks.length === 0 ? (
+                  <p>No tasks found for this project.</p>
+              ) : (
+                  <ListGroup>
+                      {usersTasks.map(user => (
+                          <ListGroup.Item key={user.user_id}>
+                              <h5>{user.name} ({user.job_title})</h5>
+                              {Array.isArray(user.tasks) && user.tasks.length > 0 ? (
+                                  <ul>
+                                      {user.tasks.map(task => (
+                                          <li key={task.task_id}>
+                                              {task.task_name} - {task.status === 1 ? "Completed" : "Pending"}
+                                          </li>
+                                      ))}
+                                  </ul>
+                              ) : (
+                                  <p>No tasks assigned</p>
+                              )}
+                          </ListGroup.Item>
+                      ))}
+                  </ListGroup>
+              )}
+          </Modal.Body>
+          <Modal.Footer>
+              <Button variant="secondary" onClick={handleClose}>Close</Button>
+          </Modal.Footer>
+      </Modal>
+  );
+};
+
+
+
+  
+
 
   // Fetch projects assigned to the user
   const fetchProjects = useCallback(async () => {
     try {
+      console.log("Fetching projects...");
+      console.log("Current userId:", userId);
+  
       const res = await fetch(
-        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getProjects&user_id=${userId}`
-      )
-      const data = await res.json()
-      console.log("Fetched projects:", data)
-      setProjects(data)
-      const initialProgressView = {}
-      data.forEach((project) => {
-        initialProgressView[project.project_id] = "user"
-      })
-      setProgressView(initialProgressView)
+        `http://35.214.101.36/ProjTasks.php?action=getProjects&user_id=${userId}`
+      );
+  
+      console.log("Projects response status:", res.status);
+  
+      const text = await res.text();
+      console.log("Raw projects response:", text);
+  
+      const data = JSON.parse(text);
+      console.log("Parsed projects data:", data);
+  
+      setProjects(data);
+  
+      // Fetch team leader for each project in parallel
+      const leaderPromises = data.map((project) => fetchTeamLeader(project.project_id));
+      await Promise.all(leaderPromises); // Ensure all fetches complete before proceeding
+  
     } catch (err) {
-      console.error("Error fetching projects:", err)
+      console.error("Error fetching projects:", err);
     }
-  }, [])
+  }, []);
+  
 
   // Fetch tasks for a specific project for the current user
   const fetchTasks = useCallback(async (projectId) => {
     try {
+      console.log(`Fetching tasks for project ${projectId}...`);
+  
       const res = await fetch(
-        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getTasks&project_id=${projectId}&user_id=${userId}`
-      )
-      const data = await res.json()
-      console.log("Fetched tasks for project", projectId, ":", data)
+        `http://35.214.101.36/ProjTasks.php?action=getTasks&project_id=${projectId}&user_id=${userId}`
+      );
+  
+      console.log(`Tasks response status for project ${projectId}:`, res.status);
+  
+      const text = await res.text();
+      console.log(`Raw tasks response for project ${projectId}:`, text);
+  
+      const data = JSON.parse(text);
+      console.log(`Parsed tasks data for project ${projectId}:`, data);
+  
       setTasks((prevTasks) => ({
         ...prevTasks,
         [projectId]: data,
-      }))
+      }));
     } catch (err) {
-      console.error("Error fetching tasks:", err)
+      console.error(`Error fetching tasks for project ${projectId}:`, err);
     }
-  }, [])
+  }, []);
+
+
+
+  const fetchTeamLeader = async (projectId) => {
+    try {
+      console.log(`Fetching team leader for project ${projectId}...`);
+      
+      const res = await fetch(
+        `http://35.214.101.36/ProjTasks.php?action=getTeamLeader&project_id=${projectId}`
+      );
+  
+      const text = await res.text();
+      console.log(`Raw team leader response for project ${projectId}:`, text);
+  
+      const data = JSON.parse(text);
+      console.log(`Parsed team leader data for project ${projectId}:`, data);
+  
+      setTeamLeaders((prevLeaders) => {
+        const updatedLeaders = {
+          ...prevLeaders,
+          [projectId]: Number(data.team_leader_id) || null,  // Ensure numeric comparison
+        };
+        console.log("Updated teamLeaders state:", JSON.stringify(updatedLeaders, null, 2)); // Better logging
+        return updatedLeaders;
+      });
+  
+    } catch (err) {
+      console.error(`Error fetching team leader for project ${projectId}:`, err);
+    }
+  };
+  
+  
+
+
 
   // Fetch individual tasks assigned to the user
   const fetchIndividualTasks = useCallback(async () => {
     try {
+      console.log("Fetching individual tasks...");
+  
       const res = await fetch(
-        `${"http://35.214.101.36/EmpProjectsTasks.php"}?action=getIndividualTasks&user_id=${userId}`
-      )
-      const data = await res.json()
-      console.log("Fetched individual tasks:", data)
-      setIndividualTasks(data)
+        `http://35.214.101.36/ProjTasks.php?action=getIndividualTasks&user_id=${userId}`
+      );
+  
+      console.log("Individual tasks response status:", res.status);
+  
+      const text = await res.text();
+      console.log("Raw individual tasks response:", text);
+  
+      const data = JSON.parse(text);
+      console.log("Parsed individual tasks data:", data);
+  
+      setIndividualTasks(data);
     } catch (err) {
-      console.error("Error fetching individual tasks:", err)
+      console.error("Error fetching individual tasks:", err);
     }
-  }, [])
+  }, []);
 
   useEffect(() => {
     fetchProjects()
     fetchIndividualTasks()
-  }, [fetchProjects, fetchIndividualTasks])
+  }, [fetchProjects, fetchIndividualTasks]) 
 
   // Toggle a task’s completion status
   const handleTaskToggle = async (projectId, taskId, currentStatus) => {
     try {
-      const res = await fetch(`${"http://35.214.101.36/EmpProjectsTasks.php"}?action=updateTask`, {
+      const res = await fetch(`${"http://35.214.101.36/ProjTasks.php"}?action=updateTask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -143,7 +294,7 @@ const EmpProjectsTasks = ( {userId} ) => {
   // Toggle individual task completion status
   const handleIndividualTaskToggle = async (taskId, currentStatus) => {
     try {
-      const res = await fetch(`${"http://35.214.101.36/EmpProjectsTasks.php"}?action=updateIndividualTask`, {
+      const res = await fetch(`${"http://35.214.101.36/ProjTasks.php"}?action=updateIndividualTask`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -274,10 +425,20 @@ const EmpProjectsTasks = ( {userId} ) => {
                   {getTimeStatus(project.deadline).icon}
                 </Card.Header>
                 <Card.Body className="d-flex flex-column">
+
+                <div className="d-flex justify-content-between align-items-center">
                   <Card.Title className="mb-2">{project.name}</Card.Title>
-                  <Card.Text className="text-muted small mb-2">
-                    {project.description}
-                  </Card.Text>
+                  {isTeamLeader(project.project_id) && (
+                    <Button variant="outline-primary" size="sm" onClick={() => {
+                      setSelectedProject(project); // Store selected project
+                      setShowEditModal(true); // Open modal immediately
+                      fetchProjectUsersTasks(project.project_id); // Fetch data
+                  }}>
+                      Edit
+                    </Button>
+                  )}
+                </div>
+
                   <Card.Text className="text-muted small mb-3">
                     {getTimeStatus(project.deadline).text}
                   </Card.Text>
@@ -408,6 +569,8 @@ const EmpProjectsTasks = ( {userId} ) => {
           ))}
       </Row>
 
+
+
       {/* Individual Tasks Section */}
       <Row className="mt-4">
         <Col xs={12}>
@@ -512,6 +675,14 @@ const EmpProjectsTasks = ( {userId} ) => {
           </div>
         </Modal.Body>
       </Modal>
+
+      <EditProjectTasksModal 
+    show={showEditModal} 
+    handleClose={() => setShowEditModal(false)} 
+    usersTasks={projectUsersTasks} 
+    selectedProject={selectedProject}
+/>
+
     </Container>
   )
 }
