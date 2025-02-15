@@ -50,6 +50,11 @@ function TodoList({ userId }) {
     dueDate: "",
   })
 
+  const [errors, setErrors] = useState({
+    name: "",
+    dueDate: "",
+  });
+
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
@@ -216,12 +221,23 @@ function TodoList({ userId }) {
   }
 
   const handleSubmit = async () => {
+    // Reset errors
+    setErrors({ name: "", dueDate: "" });
+  
+    // Validate task name
     if (!newTodo.name || !newTodo.name.trim()) {
-      console.error("Task name is required.")
-      return
+      setErrors((prev) => ({ ...prev, name: "Task name is required." }));
+      return;
     }
-
-    const method = editingIndex !== null ? "PUT" : "POST"
+  
+    // Validate due date
+    if (!newTodo.dueDate) {
+      setErrors((prev) => ({ ...prev, dueDate: "Due date is required." }));
+      return;
+    }
+  
+    // Proceed with saving the task
+    const method = editingIndex !== null ? "PUT" : "POST";
     const payload = {
       todo_id: editingIndex !== null ? todos[editingIndex].todo_id : undefined,
       user_id: userId,
@@ -230,18 +246,18 @@ function TodoList({ userId }) {
       status: newTodo.status.charAt(0).toUpperCase() + newTodo.status.slice(1),
       priority: newTodo.priority.charAt(0).toUpperCase() + newTodo.priority.slice(1),
       due_date: newTodo.dueDate,
-    }
-
+    };
+  
     try {
       const response = await fetch("http://35.214.101.36/ToDoList.php", {
         method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
-      })
-
+      });
+  
       if (response.ok) {
         if (editingIndex !== null) {
-          const updatedTodos = [...todos]
+          const updatedTodos = [...todos];
           updatedTodos[editingIndex] = {
             ...updatedTodos[editingIndex],
             name: newTodo.name,
@@ -249,8 +265,8 @@ function TodoList({ userId }) {
             status: newTodo.status,
             priority: newTodo.priority,
             dueDate: newTodo.dueDate,
-          }
-          setTodos(updatedTodos)
+          };
+          setTodos(updatedTodos);
         } else {
           const newTask = {
             todo_id: Date.now(),
@@ -259,18 +275,18 @@ function TodoList({ userId }) {
             status: newTodo.status,
             priority: newTodo.priority,
             dueDate: newTodo.dueDate,
-          }
-          setTodos([...todos, newTask])
+          };
+          setTodos([...todos, newTask]);
         }
-        handleClose()
-        fetchTodos()
+        handleClose();
+        fetchTodos();
       } else {
-        console.error("Error saving task:", response.statusText)
+        console.error("Error saving task:", response.statusText);
       }
     } catch (error) {
-      console.error("Error saving task:", error)
+      console.error("Error saving task:", error);
     }
-  }
+  };
 
 
   const handleTodoSelect = async (index) => {
@@ -654,131 +670,162 @@ function TodoList({ userId }) {
       {/* Modals */}
       <Modal show={showModal} onHide={handleClose} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
-          <Modal.Title>{editingIndex !== null ? "Edit Task" : "Add New Task"}</Modal.Title>
+            <Modal.Title>{editingIndex !== null ? "Edit Task" : "Add New Task"}</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
+            <Form>
             <Form.Group className="mb-3">
-              <Form.Label>Task Name</Form.Label>
-              <Form.Control
+                <Form.Label>Task Name</Form.Label>
+                <Form.Control
                 type="text"
                 name="name"
                 value={newTodo.name}
                 onChange={handleInputChange}
                 placeholder="Enter task name"
-              />
+                isInvalid={!!errors.name}
+                />
+                <Form.Control.Feedback type="invalid">
+                {errors.name}
+                </Form.Control.Feedback>
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Description</Form.Label>
-              <Form.Control
+                <Form.Label>Description</Form.Label>
+                <Form.Control
                 as="textarea"
                 rows={3}
                 name="description"
                 value={newTodo.description}
                 onChange={handleInputChange}
                 placeholder="Enter task description"
-              />
+                />
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Status</Form.Label>
-              <Form.Select name="status" value={newTodo.status} onChange={handleInputChange}>
+                <Form.Label>Status</Form.Label>
+                <Form.Select
+                name="status"
+                value={newTodo.status}
+                onChange={handleInputChange}
+                >
                 <option value="pending">Pending</option>
                 <option value="completed">Completed</option>
-              </Form.Select>
+                </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Priority</Form.Label>
-              <Form.Select name="priority" value={newTodo.priority} onChange={handleInputChange}>
+                <Form.Label>Priority</Form.Label>
+                <Form.Select
+                name="priority"
+                value={newTodo.priority}
+                onChange={handleInputChange}
+                >
                 <option value="low">Low</option>
                 <option value="medium">Medium</option>
                 <option value="high">High</option>
-              </Form.Select>
+                </Form.Select>
             </Form.Group>
 
             <Form.Group className="mb-3">
-              <Form.Label>Due Date</Form.Label>
-              <Form.Control type="date" name="dueDate" value={newTodo.dueDate} onChange={handleInputChange} />
+                <Form.Label>Due Date</Form.Label>
+                <Form.Control
+                type="date"
+                name="dueDate"
+                value={newTodo.dueDate}
+                onChange={handleInputChange}
+                isInvalid={!!errors.dueDate}
+                />
+                <Form.Control.Feedback type="invalid">
+                {errors.dueDate}
+                </Form.Control.Feedback>
             </Form.Group>
-          </Form>
+            </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleClose}>
+            <Button variant="secondary" onClick={handleClose}>
             Cancel
-          </Button>
-          <Button variant="primary" onClick={handleSubmit}>
+            </Button>
+            <Button variant="primary" onClick={handleSubmit}>
             {editingIndex !== null ? "Save Changes" : "Add Task"}
-          </Button>
+            </Button>
         </Modal.Footer>
-      </Modal>
-
-      <Modal
-        show={showBinModal}
-        onHide={() => {
-          setShowBinModal(false)
-          setSelectedBinItems([])
-        }}
-        backdrop="static"
-        keyboard={false}
-        size="lg"
-      >
-        <Modal.Header closeButton>
-          <Modal.Title>Recycle Bin</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-        <ListGroup>
-            {deletedTodos.map((todo, index) => (
-                <ListGroup.Item
-                key={index}
-                className="d-flex justify-content-between align-items-center"
-                style={{
-                    cursor: "pointer",
-                    backgroundColor: selectedBinItems.includes(index) ? "#f8f9fa" : "transparent",
-                    transition: "background-color 0.3s ease",
-                }}
-                onClick={() => handleBinItemSelect(index)} // Toggle selection on click
+        </Modal>
+        <Modal
+            show={showBinModal}
+            onHide={() => {
+                setShowBinModal(false);
+                setSelectedBinItems([]);
+            }}
+            backdrop="static"
+            keyboard={false}
+            size="lg"
+            >
+            <Modal.Header closeButton>
+                <Modal.Title>Recycle Bin</Modal.Title>
+            </Modal.Header>
+            <Modal.Body>
+                {deletedTodos.length === 0 ? (
+                <div className="text-center py-4">
+                    <h5>The bin is empty.</h5>
+                    <p>No deleted tasks to display.</p>
+                </div>
+                ) : (
+                <ListGroup>
+                    {deletedTodos.map((todo, index) => (
+                    <ListGroup.Item
+                        key={index}
+                        className="d-flex justify-content-between align-items-center"
+                        style={{
+                        cursor: "pointer",
+                        backgroundColor: selectedBinItems.includes(index) ? "#f8f9fa" : "transparent",
+                        transition: "background-color 0.3s ease",
+                        }}
+                        onClick={() => handleBinItemSelect(index)}
+                    >
+                        <div className="d-flex align-items-center">
+                        <Form.Check
+                            type="checkbox"
+                            checked={selectedBinItems.includes(index)}
+                            onChange={() => handleBinItemSelect(index)}
+                            className="me-3"
+                        />
+                        <div>
+                            <h6 className="mb-1">{todo.name}</h6>
+                            <small className="text-muted">
+                            Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
+                            </small>
+                        </div>
+                        </div>
+                        <div>
+                        <Badge bg={getPriorityBadgeVariant(todo.priority)} className="me-2">
+                            {todo.priority}
+                        </Badge>
+                        <Badge bg={todo.status === "completed" ? "success" : "secondary"}>
+                            {todo.status}
+                        </Badge>
+                        </div>
+                    </ListGroup.Item>
+                    ))}
+                </ListGroup>
+                )}
+            </Modal.Body>
+            <Modal.Footer>
+                <Button
+                variant="success"
+                disabled={selectedBinItems.length === 0}
+                onClick={() => setShowRestoreModal(true)}
                 >
-                <div className="d-flex align-items-center">
-                    <Form.Check
-                    type="checkbox"
-                    checked={selectedBinItems.includes(index)}
-                    onChange={() => handleBinItemSelect(index)}
-                    className="me-3"
-                    />
-                    <div>
-                    <h6 className="mb-1">{todo.name}</h6>
-                    <small className="text-muted">
-                        Deleted: {new Date(todo.deletedAt).toLocaleDateString()}
-                    </small>
-                    </div>
-                </div>
-                <div>
-                    <Badge bg={getPriorityBadgeVariant(todo.priority)} className="me-2">
-                    {todo.priority}
-                    </Badge>
-                    <Badge bg={todo.status === "completed" ? "success" : "secondary"}>
-                    {todo.status}
-                    </Badge>
-                </div>
-                </ListGroup.Item>
-            ))}
-            </ListGroup>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="success" disabled={selectedBinItems.length === 0} onClick={() => setShowRestoreModal(true)}>
-            Restore Selected
-          </Button>
-          <Button
-            variant="danger"
-            disabled={selectedBinItems.length === 0}
-            onClick={() => setShowPermanentDeleteModal(true)}
-          >
-            Delete Permanently
-          </Button>
-        </Modal.Footer>
-      </Modal>
+                Restore Selected
+                </Button>
+                <Button
+                variant="danger"
+                disabled={selectedBinItems.length === 0}
+                onClick={() => setShowPermanentDeleteModal(true)}
+                >
+                Delete Permanently
+                </Button>
+            </Modal.Footer>
+            </Modal>
 
       <Modal show={showRestoreModal} onHide={() => setShowRestoreModal(false)} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
