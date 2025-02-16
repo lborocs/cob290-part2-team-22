@@ -22,7 +22,10 @@ function getTaskStats($mysqli) {
     $queries = [
         "total_tasks" => "SELECT COUNT(*) AS total_tasks FROM project_tasks",
         "completed_tasks" => "SELECT COUNT(*) AS completed_tasks FROM project_tasks WHERE status = 1",
-        "uncompleted_tasks" => "SELECT COUNT(*) AS uncompleted_tasks FROM project_tasks WHERE status = 0"
+        "uncompleted_tasks" => "SELECT COUNT(*) AS uncompleted_tasks FROM project_tasks WHERE status = 0",
+        "high_prio_tasks" => "SELECT COUNT(*) AS high_prio_tasks FROM `individual_tasks` WHERE priority = 'high'",
+        "med_prio_tasks" => "SELECT COUNT(*) AS med_prio_tasks FROM `individual_tasks` WHERE priority = 'medium'",
+        "low_prio_tasks" => "SELECT COUNT(*) AS low_prio_tasks FROM `individual_tasks` WHERE priority = 'low'"
     ];
 
     $taskStats = [];
@@ -62,7 +65,7 @@ function getTaskStatsByProject($mysqli, $project_id) {
 }
 
 function getProjects($mysqli) {
-    $query = "SELECT project_id, name FROM Projects";
+    $query = "SELECT project_id, name FROM Projects WHERE completed = 0 AND binned = 0";
     $result = $mysqli->query($query);
     $projects = [];
     if ($result) {

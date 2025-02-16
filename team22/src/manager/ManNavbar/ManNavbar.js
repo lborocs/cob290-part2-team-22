@@ -168,12 +168,12 @@ const closeDropdown = () => {
   return (
     <div>
       {/* Top Navbar */}
-      <Navbar expand="lg" bg="dark" variant="dark" fixed="top" className="custom-navbar">
-        <Container fluid>
+      <Navbar expand="lg" className="custom-navbar" fixed="top">
+      <Container fluid>
           {/* Company Logo */}
           <Navbar.Brand as={Link} to="/" className="me-auto">
             <img
-              src="/company-logo.png"
+              src="/company-logo2.png"
               alt="Company Logo"
               className="company-logo"
             />
@@ -189,22 +189,22 @@ const closeDropdown = () => {
           {/* Navbar Links */}
         <Navbar.Collapse id="navbar-nav" in={isNavbarOpen}> {/* Collapse based on state */}
             <Nav className="me-auto">
-              <Nav.Link as={Link} to="/" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/" className="text-black" onClick={closeDropdown}>
                 Home
               </Nav.Link>
-              <Nav.Link as={Link} to="/projects" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/projects" className="text-black" onClick={closeDropdown}>
                 Projects
               </Nav.Link>
-              <Nav.Link as={Link} to="/tasks" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/tasks" className="text-black" onClick={closeDropdown}>
                 Tasks
               </Nav.Link>
-              <Nav.Link as={Link} to="/employees" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/employees" className="text-black" onClick={closeDropdown}>
                 Employees
               </Nav.Link>
-              <Nav.Link as={Link} to="/todolist" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/todolist" className="text-black" onClick={closeDropdown}>
                 TodoList
               </Nav.Link>
-              <Nav.Link as={Link} to="/forum" className="text-white" onClick={closeDropdown}>
+              <Nav.Link as={Link} to="/forum" className="text-black" onClick={closeDropdown}>
                 Forum
               </Nav.Link>
             </Nav>
@@ -324,8 +324,12 @@ const closeDropdown = () => {
             height: 45px;
             padding-right: 30px;
           }
-
+          .custom-navbar {
+              background-color:rgb(232, 232, 236) !important;
+              border-bottom: 2px solid #f8b400;
+            }
           .navbar-nav .nav-link {
+            color: black !important;
             font-size: 18px;
             padding: 13px 25px;
             margin-right: 20px;
@@ -334,6 +338,11 @@ const closeDropdown = () => {
 
           .navbar-nav .nav-link:hover {
             color: #f8b400 !important;
+          }
+          
+           /* Change the hamburger icon to black */
+          .navbar-toggler-icon {
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='black' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
           }
 
           .navbar-toggler:hover {
@@ -346,13 +355,15 @@ const closeDropdown = () => {
           }
 
           .profile-dropdown .dropdown-menu {
-            background-color: #212529;
             border: none;
             min-width: 180px;
           }
 
+          .form-label{
+          padding-top: 0.5rem;}
+          
           .profile-dropdown .dropdown-item {
-            color: #f8f9fa;
+            color: black;
             font-size: 16px;
             padding: 10px 15px;
             transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out;
