@@ -172,7 +172,7 @@ const ManEmployees = () => {
     };
   };
 
-  // Process data for the task allocation bar chart (Top 5)
+  // Process data for the individual tasks bar chart (Top 5)
   const processTaskData = () => {
     const topEmployees = [...employees]
       .sort((a, b) => b.individualTasks - a.individualTasks)
@@ -297,7 +297,7 @@ const ManEmployees = () => {
                     size="sm"
                     onClick={() => handleShowModal(emp)}
                   >
-                    <FiEye /> View
+                    <FiEye /> Actions
                   </Button>
                 </td>
               </tr>
