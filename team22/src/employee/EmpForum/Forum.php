@@ -5,9 +5,7 @@ header("Content-Type: application/json");
 header("Access-Control-Allow-Methods: GET, POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type, Authorization");
 
-// 35.214.101.36
-// localhost/cob290-part2-team-22/team22/src/employee/EmpForum
-
+// Database fetch parameters
 $host = 'localhost';
 $username = 'Team22'; 
 $password = 'p';   
@@ -137,6 +135,7 @@ function getTopics($mysqli) {
             JOIN Users u ON t.created_by = u.user_id
             WHERE 1=1";
 
+    // Filtering parameters
     if ($technical_filter !== null && ($technical_filter === '0' || $technical_filter === '1')) {
         $sql .= " AND t.technical = " . intval($technical_filter);
     }
@@ -191,7 +190,7 @@ function updatePost($mysqli) {
 }
 
 function getUsers($mysqli) {
-    $sql = "SELECT user_id, name, job_title FROM Users";
+    $sql = "SELECT user_id, name, job_title FROM Users ORDER BY name";
     $result = $mysqli->query($sql);
     $users = [];
     
