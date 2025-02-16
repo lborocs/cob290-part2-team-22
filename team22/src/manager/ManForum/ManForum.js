@@ -172,55 +172,81 @@ function TopicsList({ userId }) {
           <p className="lead text-muted">No topics yet. Create one to get started!</p>
         </div>
       ) : (
-        <div className="row g-4">
+        <div className="row g-3">
           {topics.map(topic => {
             const isTechnical = Number(topic.technical) === 1;
-            const isOwner = Number(topic.created_by) === Number(userId);
+            const isOwner = 1;
             return (
               <div key={topic.topic_id} className="col-12">
-                <div className="card h-100 border-0 shadow-sm">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between">
-                      <h3 className="h5 mb-3">
-                        <Link to={`topic/${topic.topic_id}`} className="text-decoration-none text-dark">
+                <div 
+                  className="card h-100 shadow-sm"
+                  style={{
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    cursor: 'pointer',
+                    borderLeft: `4px solid ${isTechnical ? '#71c8ec' : '#6f757c'}`,  // Defined border
+                    borderRadius: '8px',  // Rounded corners
+                    padding: '0px',  // Add spacing inside
+                    backgroundColor: 'white',  // Clean background
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
+                    marginLeft: '0px',  // Reset left margin if needed
+                    overflow: 'visible'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
+                  <Link 
+                    to={`topic/${topic.topic_id}`} 
+                    className="text-decoration-none text-dark"
+                    style={{ display: 'contents' }} // Makes the link inherit parent dimensions
+                  >
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between">
+                        <h3 className="h5 mb-3">
                           {topic.title}
-                        </Link>
-                      </h3>
-                        <div className="dropdown">
-                          <button
-                            className="btn btn-light btn-sm"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                          >
-                            <i className="bi bi-three-dots"></i>
-                          </button>
-                          <ul className="dropdown-menu dropdown-menu-end">
-                            <li>
-                              <button
-                                className="dropdown-item text-danger"
-                                onClick={() => { setShowDeleteModal(true); setTopicToDelete(topic); }}
-                              >
-                                <i className="bi bi-trash me-2"></i> Delete
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
+                        </h3>
+                        {isOwner && (
+                          <div className="dropdown" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="btn btn-light btn-sm"
+                              type="button"
+                              data-bs-toggle="dropdown"
+                              onClick={(e) => e.preventDefault()}
+                            >
+                              <i className="bi bi-three-dots"></i>
+                            </button>
+                            <ul className="dropdown-menu dropdown-menu-end">
+                              <li>
+                                <button
+                                  className="dropdown-item text-danger"
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    setShowDeleteModal(true); 
+                                    setTopicToDelete(topic); 
+                                  }}
+                                >
+                                  <i className="bi bi-trash me-2"></i> Delete
+                                </button>
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-muted mb-3">{topic.description}</p>
+                      <div className="d-flex flex-wrap gap-3 align-items-center">
+                        <span className="badge bg-light text-dark border">
+                          <i className="bi bi-person me-1"></i>
+                          {topic.creator_name}
+                        </span>
+                        <span className="badge bg-light text-dark border">
+                          <i className="bi bi-clock me-1"></i>
+                          {new Date(topic.date_time).toLocaleDateString()}
+                        </span>
+                        <span className={`badge ${isTechnical ? 'bg-info' : 'bg-secondary'}`}>
+                          {isTechnical ? 'Technical' : 'Non-Technical'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-muted mb-3">{topic.description}</p>
-                    <div className="d-flex flex-wrap gap-3 align-items-center">
-                      <span className="badge bg-light text-dark border">
-                        <i className="bi bi-person me-1"></i>
-                        {topic.creator_name}
-                      </span>
-                      <span className="badge bg-light text-dark border">
-                        <i className="bi bi-clock me-1"></i>
-                        {new Date(topic.date_time).toLocaleDateString()}
-                      </span>
-                      <span className={`badge ${isTechnical ? 'bg-info' : 'bg-secondary'}`}>
-                        {isTechnical ? 'Technical' : 'Non-Technical'}
-                      </span>
-                    </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
             );
@@ -669,12 +695,22 @@ function TopicView({ userId }) {
           <p className="lead text-muted">No posts yet. Be the first to create one!</p>
         </div>
       ) : (
-        <div className="row g-4">
+        <div className="row g-3">
           {posts.map(post => {
             const isOwner = Number(post.user_id) === Number(userId);
             return (
               <div key={post.post_id} className="col-12">
-                <div className="card border-0 shadow-sm">
+                <div 
+                  className="card shadow-sm"
+                  style={{
+                    borderRadius: '8px',  // Rounded corners
+                    backgroundColor: 'white',  // Clean background
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
+                    marginLeft: '0px',  // Reset left margin if needed
+                    overflow: 'visible',
+                  }}
+                >
+
                   <div className="card-body">
                     <div className="d-flex justify-content-between mb-3">
                       <div className="d-flex align-items-center">
