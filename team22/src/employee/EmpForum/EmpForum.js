@@ -16,7 +16,6 @@ function EmpForum({ userId }) {
   );
 }
 
-
 /* 
   TopicsList Component:
   - Manages display and filtering of forum topics
@@ -732,6 +731,7 @@ function TopicView({ userId }) {
             const isOwner = Number(post.user_id) === Number(userId); // constant checks if user created post  
             return (
               <div key={post.post_id} className="col-12">
+                {/* Post styling */}
                 <div 
                   className="card shadow-sm"
                   style={{
@@ -743,7 +743,7 @@ function TopicView({ userId }) {
                   }}
                 >
 
-                  <div className="card-body"> {/* Post styling */}
+                  <div className="card-body">
                     <div className="d-flex justify-content-between mb-3">
                       <div className="d-flex align-items-center">
                         <div className="bg-light rounded-circle p-2 me-2">
