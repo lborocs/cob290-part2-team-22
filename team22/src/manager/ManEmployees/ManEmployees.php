@@ -56,5 +56,43 @@ if ($action == 'getEmployees') {
     exit;
 }
 
+// Handle updating employee details
+if ($action == 'updateEmployee') {
+    // Get the raw POST data
+    $data = json_decode(file_get_contents('php://input'), true);
+
+    // Extract data
+    $user_id = $data['user_id'] ?? null;
+    $job_title = $data['job_title'] ?? null;
+    $skills = $data['skills'] ?? null;
+
+    if (!$user_id || !$job_title || !$skills) {
+        die(json_encode(["error" => "Missing required fields"]));
+    }
+
+    // Update the job title in the Users table
+    $sql = "UPDATE Users SET job_title = ? WHERE user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("si", $job_title, $user_id);
+    $stmt->execute();
+
+    if ($stmt->affected_rows === -1) {
+        die(json_encode(["error" => "Failed to update job title"]));
+    }
+
+    // Update the skills in the Skills table
+    $sql = "UPDATE Skills SET skills = ? WHERE user_id = ?";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("si", $skills, $user_id);
+    $stmt->execute();
+
+    if ($stmt->affected_rows === -1) {
+        die(json_encode(["error" => "Failed to update skills"]));
+    }
+
+    echo json_encode(["success" => true]);
+    exit;
+}
+
 $conn->close();
 ?>
