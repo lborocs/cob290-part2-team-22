@@ -2,9 +2,7 @@ import React from 'react';
 import { Routes, Route, Link, useParams } from 'react-router-dom';
 import 'bootstrap/dist/css/bootstrap.min.css';
 
-// You can assume TopicsList and TopicView are defined here or imported
-// from separate files for clarity. Below is just a placeholder structure.
-
+// Main forum component handling routing between topics list and individual topics
 function EmpForum({ userId }) {
   return (
     <div className="container mt-4">
@@ -19,7 +17,15 @@ function EmpForum({ userId }) {
 }
 
 
+/* 
+  TopicsList Component:
+  - Manages display and filtering of forum topics
+  - Handles topic creation/deletion
+  - Implements search, sort, and filter functionality
+  - Uses modals for create/delete actions and filtering
+*/
 function TopicsList({ userId }) {
+  // State management for various filters and UI controls
   const [searchQuery, setSearchQuery] = React.useState('');
 
   const [sortOrder, setSortOrder] = React.useState('newest');
@@ -27,7 +33,7 @@ function TopicsList({ userId }) {
 
   const [users, setUsers] = React.useState([]);
   const [userFilter, setUserFilter] = React.useState(null);
-  const [tempUserFilter, setTempUserFilter] = React.useState(null);
+  const [tempUserFilter, setTempUserFilter] = React.useState(null); // null = all users
 
   const [fromDate, setFromDate] = React.useState(null);
   const [toDate, setToDate] = React.useState(null);
@@ -46,10 +52,10 @@ function TopicsList({ userId }) {
     technical: false
   });
 
-  // For deletion (if implemented as before)
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [topicToDelete, setTopicToDelete] = React.useState(null);
 
+  // Fetches data from the ForumTopics database using php, using the filters as dependencies
   React.useEffect(() => {
     fetch('http://35.214.101.36/Forum.php?process=getUsers') 
       .then(res => res.json())
@@ -59,7 +65,9 @@ function TopicsList({ userId }) {
     fetchTopics();
   }, [technicalFilter, fromDate, toDate, userFilter, sortOrder, searchQuery]);
 
+  // Fetches topics with current filter parameters
   const fetchTopics = () => {
+    // Construct API URL with active filters
     let url = 'http://35.214.101.36/Forum.php?process=getTopics';
     
     const params = [];
@@ -80,7 +88,9 @@ function TopicsList({ userId }) {
       .catch(err => console.error('Error fetching topics:', err));
   };
   
+  // Handles topic creation form submission
   const handleCreateTopic = (e) => {
+    // Form data preparation and API call
     e.preventDefault();
     const formData = new FormData();
     formData.append('title', newTopic.title);
@@ -104,7 +114,9 @@ function TopicsList({ userId }) {
       });
   };
 
+  // Handles topic deletion confirmation
   const handleDeleteTopic = () => {
+    // API call to delete topic
     if (!topicToDelete) return;
 
     const formData = new FormData();
@@ -118,9 +130,9 @@ function TopicsList({ userId }) {
       .then(res => res.json())
       .then(data => {
         if (data.success) {
-          setShowDeleteModal(false);
+          setShowDeleteModal(false); // Creates delete modal
           setTopicToDelete(null);
-          fetchTopics();
+          fetchTopics(); // re fetches topics
         } else {
           alert('Error deleting topic.');
         }
@@ -132,9 +144,10 @@ function TopicsList({ userId }) {
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h2 className="h4 mb-0">Topics</h2>
         <div className="d-flex gap-2">
-          <button className="btn btn-primary d-flex align-items-center" onClick={() => setShowModal(true)}>
+          <button className="btn btn-primary d-flex align-items-center" onClick={() => setShowModal(true)}> {/* Create topics button */}
             <i className="bi bi-plus-circle me-2"></i> Create Topic
           </button>
+          {/* Filter button */}
           <button 
             className="btn btn-outline-secondary d-flex align-items-center" 
             onClick={() => {
@@ -151,7 +164,7 @@ function TopicsList({ userId }) {
         </div>
       </div>
 
-      <div className="mb-4">
+      <div className="mb-4"> {/* Search bar */}
         <div className="input-group">
           <span className="input-group-text bg-white">
             <i className="bi bi-search"></i>
@@ -169,26 +182,26 @@ function TopicsList({ userId }) {
       {topics.length === 0 ? (
         <div className="text-center py-5">
           <i className="bi bi-chat-square-text display-1 text-muted mb-3"></i>
-          <p className="lead text-muted">No topics yet. Create one to get started!</p>
+          <p className="lead text-muted">No topics yet. Create one to get started!</p> {/* Produces message if there are no topics */}
         </div>
       ) : (
         <div className="row g-3">
           {topics.map(topic => {
             const isTechnical = Number(topic.technical) === 1;
-            const isOwner = Number(topic.created_by) === Number(userId);
+            const isOwner = Number(topic.created_by) === Number(userId); // constant to check if user created a topic
             return (
-              <div key={topic.topic_id} className="col-12">
+              <div key={topic.topic_id} className="col-12"> {/* style for topic cards */}
                 <div 
                   className="card h-100 shadow-sm"
                   style={{
                     transition: 'transform 0.3s ease, box-shadow 0.3s ease',
                     cursor: 'pointer',
-                    borderLeft: `4px solid ${isTechnical ? '#71c8ec' : '#6f757c'}`,  // Defined border
-                    borderRadius: '8px',  // Rounded corners
-                    padding: '0px',  // Add spacing inside
-                    backgroundColor: 'white',  // Clean background
-                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
-                    marginLeft: '0px',  // Reset left margin if needed
+                    borderLeft: `4px solid ${isTechnical ? '#71c8ec' : '#6f757c'}`,  
+                    borderRadius: '8px',
+                    padding: '0px', 
+                    backgroundColor: 'white',
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',
+                    marginLeft: '0px', 
                     overflow: 'visible'
                   }}
                   onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
@@ -197,13 +210,14 @@ function TopicsList({ userId }) {
                   <Link 
                     to={`topic/${topic.topic_id}`} 
                     className="text-decoration-none text-dark"
-                    style={{ display: 'contents' }} // Makes the link inherit parent dimensions
+                    style={{ display: 'contents' }} 
                   >
                     <div className="card-body">
                       <div className="d-flex justify-content-between">
                         <h3 className="h5 mb-3">
                           {topic.title}
                         </h3>
+                        {/* Adds dropdown delete menu if post is created by user */}
                         {isOwner && (
                           <div className="dropdown" onClick={(e) => e.stopPropagation()}>
                             <button
@@ -230,7 +244,7 @@ function TopicsList({ userId }) {
                             </ul>
                           </div>
                         )}
-                      </div>
+                      </div> {/* Description and tecchnical labels */}
                       <p className="text-muted mb-3">{topic.description}</p>
                       <div className="d-flex flex-wrap gap-3 align-items-center">
                         <span className="badge bg-light text-dark border">
@@ -262,7 +276,7 @@ function TopicsList({ userId }) {
               <div className="modal-header">
                 <h5 className="modal-title">Filter Topics</h5>
                 <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
-              </div>
+              </div> {/* Type filter radio buttons */}
               <h6 className="mt-2 mb-0 px-3">Topic Type</h6>
               <div className="modal-body px-3">
                 <div className="form-check">
@@ -306,6 +320,7 @@ function TopicsList({ userId }) {
                 </div>
               </div>
 
+              {/* Date range inputs */}
               <div className="mb-4 px-3">
                 <h6>Date Range</h6>
                 <div className="row g-3">
@@ -331,7 +346,7 @@ function TopicsList({ userId }) {
                   </div>
                 </div>
               
-
+                {/* Author filtering */}
                 <h6 className="mt-4">Author</h6>
                 <select 
                   className="form-select"
@@ -346,7 +361,7 @@ function TopicsList({ userId }) {
                     </option>
                   ))}
                 </select>
-
+                {/* Sort order radio buttons */}
                 <h6 className="mt-4">Sort Order</h6>
                 <div className="form-check px-4">
                   <input
@@ -375,7 +390,7 @@ function TopicsList({ userId }) {
                   </label>
                 </div>
               </div>
-
+              {/* Clear all button, resets inputs */}
               <div className="modal-footer">
                 <button 
                   type="button" 
@@ -390,6 +405,7 @@ function TopicsList({ userId }) {
                 >
                   Clear All
                 </button>
+                {/* Appliy filter button */}
                 <button 
                   className="btn btn-primary" 
                   onClick={() => { 
@@ -403,6 +419,7 @@ function TopicsList({ userId }) {
                 >
                     Apply Filter
                 </button>
+                {/* Cancel button */}
                 <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>Cancel</button>
               </div>
             </div>
@@ -441,7 +458,7 @@ function TopicsList({ userId }) {
                       rows="4"
                       required
                     />
-                  </div>
+                  </div> {/* Technical checkbox */}
                   <div className="form-check">
                     <input 
                       type="checkbox"
@@ -465,6 +482,7 @@ function TopicsList({ userId }) {
         </div>
       )}
 
+      {/* Delete confirmation modal */}
       {showDeleteModal && (
         <div className="modal d-block fade show" style={{ backgroundColor: 'rgba(0,0,0,0.5)' }}>
           <div className="modal-dialog modal-dialog-centered">
@@ -489,18 +507,23 @@ function TopicsList({ userId }) {
   );
 }
 
+/* 
+  TopicView Component:
+  - Displays individual topic and its posts
+  - Manages post creation/editing/deletion
+  - Implements post filtering and sorting
+  - Uses modals for post actions and filtering
+*/
 function TopicView({ userId }) {
-  const { id } = useParams();
-  const [posts, setPosts] = React.useState([]);
+  const { id } = useParams(); // Get topic ID from URL
+  const [posts, setPosts] = React.useState([]); // State management for posts and UI controls
   const [topic, setTopic] = React.useState(null);
   const [showModal, setShowModal] = React.useState(false);
   const [newPostContent, setNewPostContent] = React.useState('');
 
-  // For deletion
   const [showDeleteModal, setShowDeleteModal] = React.useState(false);
   const [postToDelete, setPostToDelete] = React.useState(null);
 
-  // For editing
   const [showEditModal, setShowEditModal] = React.useState(false);
   const [postToEdit, setPostToEdit] = React.useState(null);
   const [editPostContent, setEditPostContent] = React.useState('');
@@ -521,6 +544,7 @@ function TopicView({ userId }) {
 
   const [showFilterModal, setShowFilterModal] = React.useState(false);
 
+  // Fetch topic details and posts when parameters change
   React.useEffect(() => {
     // Fetch users for filter dropdown
     fetch('http://35.214.101.36/Forum.php?process=getUsers')
@@ -541,9 +565,11 @@ function TopicView({ userId }) {
       .catch(err => console.error('Error fetching topic:', err));
   };
 
+  // Handles post retrievel using filters and topic ID
   const fetchPosts = (topicId) => {
     let url = `http://35.214.101.36/Forum.php?process=getPosts&topic_id=${topicId}`;
     
+    // Filtering parameters
     const params = [];
     if (searchPostQuery) params.push(`search_post_query=${encodeURIComponent(searchPostQuery)}`);
     if (fromDate) params.push(`from_date=${fromDate}`);
@@ -561,6 +587,7 @@ function TopicView({ userId }) {
       .catch(err => console.error('Error fetching posts:', err));
   };
 
+  // Handles post creation form submission
   const handleCreatePost = (e) => {
     e.preventDefault();
     const formData = new FormData();
@@ -584,6 +611,7 @@ function TopicView({ userId }) {
       });
   };
 
+  // Handles post deletion functionality
   const handleDeletePost = () => {
     if (!postToDelete) return;
 
@@ -607,6 +635,7 @@ function TopicView({ userId }) {
     });
   };
 
+  // Handles post editing functionality
   const handleEditPost = (e) => {
     e.preventDefault();
     if (!postToEdit) return;
@@ -633,7 +662,7 @@ function TopicView({ userId }) {
   };
 
   return (
-    <div className="mt-2">
+    <div className="mt-2"> {/* Posts page, open when a topic is selected */}
       {topic ? (
         <div className="mb-4">
           <div className="d-flex justify-content-between align-items-start mb-3">
@@ -643,12 +672,13 @@ function TopicView({ userId }) {
             </div>
           </div>
           
-          {/* Modified button container */}
+          {/* Button to return to topics menu */}
           <div className="d-flex justify-content-between align-items-center mb-4">
             <Link to=".." className="btn btn-outline-secondary">
               <i className="bi bi-arrow-left me-2"></i>Back to Topics
             </Link>
             
+            {/* Create posts button */}
             <div className="d-flex gap-2">
               <button 
                 className="btn btn-primary d-flex align-items-center" 
@@ -656,6 +686,7 @@ function TopicView({ userId }) {
               >
                 <i className="bi bi-plus-circle me-2"></i> Create Post
               </button>
+              {/* Filter modal window button */}
               <button 
                 className="btn btn-outline-secondary d-flex align-items-center"
                 onClick={() => setShowFilterModal(true)}
@@ -673,8 +704,8 @@ function TopicView({ userId }) {
         </div>
       )}
     
-
-      <div className="mb-4">
+      {/* Search bar */}
+      <div className="mb-4"> 
         <div className="input-group">
           <span className="input-group-text bg-white">
             <i className="bi bi-search"></i>
@@ -689,6 +720,7 @@ function TopicView({ userId }) {
         </div>
       </div>
 
+      {/* Produces message if there are no posts */}
       {posts.length === 0 ? (
         <div className="text-center py-5">
           <i className="bi bi-chat-text display-1 text-muted mb-3"></i>
@@ -697,21 +729,21 @@ function TopicView({ userId }) {
       ) : (
         <div className="row g-3">
           {posts.map(post => {
-            const isOwner = Number(post.user_id) === Number(userId);
+            const isOwner = Number(post.user_id) === Number(userId); // constant checks if user created post  
             return (
               <div key={post.post_id} className="col-12">
                 <div 
                   className="card shadow-sm"
                   style={{
-                    borderRadius: '8px',  // Rounded corners
-                    backgroundColor: 'white',  // Clean background
-                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
-                    marginLeft: '0px',  // Reset left margin if needed
+                    borderRadius: '8px',  
+                    backgroundColor: 'white',
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)', 
+                    marginLeft: '0px', 
                     overflow: 'visible',
                   }}
                 >
 
-                  <div className="card-body">
+                  <div className="card-body"> {/* Post styling */}
                     <div className="d-flex justify-content-between mb-3">
                       <div className="d-flex align-items-center">
                         <div className="bg-light rounded-circle p-2 me-2">
@@ -723,7 +755,7 @@ function TopicView({ userId }) {
                             {new Date(post.date_time).toLocaleString()}
                           </small>
                         </div>
-                      </div>
+                      </div> {/* Checks if post is created by user and adds dropdown to edit & delete post */}
                       {isOwner && (
                         <div className="dropdown">
                           <button 
@@ -742,7 +774,7 @@ function TopicView({ userId }) {
                                   setPostToEdit(post); 
                                   setEditPostContent(post.content); 
                                 }}
-                              >
+                              > {/* Edit button */}
                                 <i className="bi bi-pencil me-2"></i> Edit
                               </button>
                             </li>
@@ -753,7 +785,7 @@ function TopicView({ userId }) {
                                   setShowDeleteModal(true); 
                                   setPostToDelete(post); 
                                 }}
-                              >
+                              > {/* Delete button */}
                                 <i className="bi bi-trash me-2"></i> Delete
                               </button>
                             </li>
@@ -780,6 +812,7 @@ function TopicView({ userId }) {
                   <h5 className="modal-title">Create New Post</h5>
                   <button type="button" className="btn-close" onClick={() => setShowModal(false)}></button>
                 </div>
+                {/* Content text box   */}
                 <div className="modal-body">
                   <div className="mb-3">
                     <label className="form-label">Content</label>
@@ -792,7 +825,7 @@ function TopicView({ userId }) {
                       required
                     />
                   </div>
-                </div>
+                </div> {/* Create post button */}
                 <div className="modal-footer border-top-0">
                   <button type="button" className="btn btn-light" onClick={() => setShowModal(false)}>Cancel</button>
                   <button type="submit" className="btn btn-primary">Create Post</button>
@@ -865,7 +898,7 @@ function TopicView({ userId }) {
               <div className="modal-header">
                 <h5 className="modal-title">Filter Posts</h5>
                 <button type="button" className="btn-close" onClick={() => setShowFilterModal(false)}></button>
-              </div>
+              </div> {/* Date filter section */}
               <div className="modal-body">
                 <div className="mb-4 px-3">
                   <h6>Date Range</h6>
@@ -892,6 +925,7 @@ function TopicView({ userId }) {
                     </div>
                   </div>
 
+                  {/* Author filter */}
                   <h6 className="mt-4">Author</h6>
                   <select 
                     className="form-select"
@@ -906,6 +940,7 @@ function TopicView({ userId }) {
                     ))}
                   </select>
 
+                  {/* Sort ordering */}
                   <h6 className="mt-4">Sort Order</h6>
                   <div className="form-check">
                     <input
@@ -936,6 +971,7 @@ function TopicView({ userId }) {
                 </div>
               </div>
               <div className="modal-footer">
+                {/* Clear all button */}
                 <button 
                   type="button" 
                   className="btn btn-outline-danger me-auto"
@@ -948,6 +984,7 @@ function TopicView({ userId }) {
                 >
                   Clear All
                 </button>
+                {/* Apply button */}
                 <button 
                   className="btn btn-primary"
                   onClick={() => {
@@ -960,6 +997,7 @@ function TopicView({ userId }) {
                 >
                   Apply Filter
                 </button>
+                {/* Cancel button */}
                 <button className="btn btn-secondary" onClick={() => setShowFilterModal(false)}>
                   Cancel
                 </button>
