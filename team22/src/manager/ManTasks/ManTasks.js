@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Container,
   Button,
@@ -36,40 +36,61 @@ const initialFormData = {
   description: "",
 }
 
+const priorityOptions = ["Low", "Medium", "High"]
+
 const ManTasks = () => {
-  // Modal and chart visibility
   const [showModal, setShowModal] = useState(false)
   const [showChart, setShowChart] = useState(false)
   const [selectedUser, setSelectedUser] = useState(null)
   const [editingTask, setEditingTask] = useState(null)
-
-  // Data states
   const [users, setUsers] = useState([])
   const [tasks, setTasks] = useState([])
-
-  // View options for tasks
   const [viewOptions, setViewOptions] = useState({
     active: true,
     completed: true,
     binned: false,
   })
+  const [formData, setFormData] = useState(initialFormData)
 
-  // Employee filter state for the dashboard
+  // Employee filter state
   const [employeeFilterText, setEmployeeFilterText] = useState("")
   const [selectedEmployees, setSelectedEmployees] = useState([])
   const [showEmployeeOptions, setShowEmployeeOptions] = useState(false)
   const employeeFilterRef = useRef(null)
 
+  // Priority filter state
+  const [priorityFilterText, setPriorityFilterText] = useState("")
+  const [selectedPriorities, setSelectedPriorities] = useState([])
+  const [showPriorityOptions, setShowPriorityOptions] = useState(false)
+  const priorityFilterRef = useRef(null)
+
+  // Deadline filter state
+  const [deadlineFilterStart, setDeadlineFilterStart] = useState("")
+  const [deadlineFilterEnd, setDeadlineFilterEnd] = useState("")
+
   // Modal "Assign To" search state
   const [assignedToSearch, setAssignedToSearch] = useState("")
 
-  // Form state for creating/editing a task
-  const [formData, setFormData] = useState(initialFormData)
+  // Confirmation Modal state
+  const [confirmModal, setConfirmModal] = useState({
+    show: false,
+    title: "",
+    message: "",
+    onConfirm: null,
+    variant: "danger", // Default variant is red
+  })
 
-  // Fetch users from backend
+  const openConfirmModal = (title, message, onConfirm, variant = "danger") => {
+    setConfirmModal({ show: true, title, message, onConfirm, variant })
+  }
+
+  const closeConfirmModal = () => {
+    setConfirmModal((prev) => ({ ...prev, show: false }))
+  }
+
   const fetchUsers = async () => {
     try {
-      const res = await fetch(`${API_URL}?action=getUsers&_=${Date.now()}`)
+      const res = await fetch(`${API_URL}?action=getUsers`)
       const data = await res.json()
       setUsers(data)
     } catch (err) {
@@ -77,10 +98,9 @@ const ManTasks = () => {
     }
   }
 
-  // Fetch tasks from backend
   const fetchTasks = async () => {
     try {
-      const res = await fetch(`${API_URL}?action=getTasks&_=${Date.now()}`)
+      const res = await fetch(`${API_URL}?action=getTasks`)
       const data = await res.json()
       setTasks(data)
     } catch (err) {
@@ -93,30 +113,55 @@ const ManTasks = () => {
     fetchTasks()
   }, [])
 
-  // For managers, only show tasks assigned by current manager
   const filterTasksByManager = (allTasks) => {
     if (currentUser.role === "Manager") {
       return allTasks.filter(
-        (task) => parseInt(task.assigned_by) === currentUser.user_id
+        (task) => Number.parseInt(task.assigned_by) === currentUser.user_id,
       )
     }
     return allTasks
   }
 
-  // Group tasks by assigned user after applying filters
   const groupTasks = () => {
     let filteredTasks = filterTasksByManager(tasks)
+    // Apply employee filter if any selected
     if (selectedEmployees.length > 0) {
       filteredTasks = filteredTasks.filter((task) =>
-        selectedEmployees.includes(parseInt(task.user_id))
+        selectedEmployees.includes(Number.parseInt(task.user_id)),
       )
     }
+    // Apply priority filter if any selected
+    if (selectedPriorities.length > 0) {
+      filteredTasks = filteredTasks.filter((task) =>
+        selectedPriorities.includes(task.priority),
+      )
+    }
+    // Apply deadline filter if set
+    if (deadlineFilterStart || deadlineFilterEnd) {
+      filteredTasks = filteredTasks.filter((task) => {
+        const taskDeadline = new Date(task.deadline)
+        let startOk = true,
+          endOk = true
+        if (deadlineFilterStart) {
+          const startDate = new Date(deadlineFilterStart)
+          startOk = taskDeadline >= startDate
+        }
+        if (deadlineFilterEnd) {
+          const endDate = new Date(deadlineFilterEnd)
+          endOk = taskDeadline <= endDate
+        }
+        return startOk && endOk
+      })
+    }
+    // Apply view options for active, completed, and binned
     filteredTasks = filteredTasks.filter((task) => {
-      if (parseInt(task.binned) === 1) {
+      if (Number.parseInt(task.binned) === 1) {
         return viewOptions.binned
       } else {
-        if (parseInt(task.status) === 0 && !viewOptions.active) return false
-        if (parseInt(task.status) === 1 && !viewOptions.completed) return false
+        if (Number.parseInt(task.status) === 0 && !viewOptions.active)
+          return false
+        if (Number.parseInt(task.status) === 1 && !viewOptions.completed)
+          return false
       }
       return true
     })
@@ -129,25 +174,31 @@ const ManTasks = () => {
 
   const getUserName = (userId) => {
     const user = users.find(
-      (u) => parseInt(u.user_id) === parseInt(userId)
+      (u) => Number.parseInt(u.user_id) === Number.parseInt(userId),
     )
     return user ? user.name : "Unknown"
   }
 
-  // Edit handler: load task data into form for editing
-  const handleEditTask = (task) => {
-    setEditingTask(task)
-    setFormData({
-      name: task.name || "",
-      priority: task.priority || "Medium",
-      deadline: task.deadline || "",
-      assignedTo: task.user_id || "",
-      description: task.description || "",
-    })
-    setShowModal(true)
+  // Employee Filter functions
+  const addEmployee = (empId) => {
+    if (!selectedEmployees.includes(empId)) {
+      setSelectedEmployees((prev) => [...prev, empId])
+    }
+  }
+  const removeEmployee = (empId) => {
+    setSelectedEmployees((prev) => prev.filter((id) => id !== empId))
   }
 
-  // Create or update a task
+  // Priority Filter functions
+  const addPriority = (priority) => {
+    if (!selectedPriorities.includes(priority)) {
+      setSelectedPriorities((prev) => [...prev, priority])
+    }
+  }
+  const removePriority = (priority) => {
+    setSelectedPriorities((prev) => prev.filter((p) => p !== priority))
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     const payload = {
@@ -162,14 +213,18 @@ const ManTasks = () => {
     } else {
       payload.individual_task_id = editingTask.individual_task_id
     }
-    let url = API_URL + (editingTask ? "?action=updateTask" : "?action=createTask")
+    const url =
+      API_URL + (editingTask ? "?action=updateTask" : "?action=createTask")
     try {
       const res = await fetch(url, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       })
-      await res.json()
+      const data = await res.json()
+      if (!data.success) {
+        alert("Error saving task: " + data.error)
+      }
       await fetchTasks()
     } catch (err) {
       console.error("Error saving task", err)
@@ -190,7 +245,10 @@ const ManTasks = () => {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ individual_task_id: taskId, ...updateData }),
       })
-      await res.json()
+      const data = await res.json()
+      if (!data.success) {
+        alert("Error updating task: " + data.error)
+      }
       await fetchTasks()
     } catch (err) {
       console.error("Error updating task", err)
@@ -198,8 +256,8 @@ const ManTasks = () => {
   }
 
   const handleStatusChange = (task) => {
-    if (parseInt(task.binned) === 1) return
-    const newStatus = parseInt(task.status) === 1 ? 0 : 1
+    if (Number.parseInt(task.binned) === 1) return
+    const newStatus = Number.parseInt(task.status) === 1 ? 0 : 1
     updateTaskField(task.individual_task_id, { status: newStatus })
   }
 
@@ -211,10 +269,10 @@ const ManTasks = () => {
         body: JSON.stringify({ individual_task_id: taskId }),
       })
       const data = await res.json()
-      if (data.success) {
-        await fetchTasks()
-      } else {
+      if (!data.success) {
         alert("Delete failed: " + data.error)
+      } else {
+        await fetchTasks()
       }
     } catch (err) {
       console.error("Error deleting task", err)
@@ -222,21 +280,41 @@ const ManTasks = () => {
   }
 
   const handleBinChange = (task) => {
-    if (parseInt(task.binned) === 1) return
-    updateTaskField(task.individual_task_id, { binned: 1 })
+    if (Number.parseInt(task.binned) === 1) return
+    openConfirmModal(
+      "Bin Task",
+      "Are you sure you want to bin this task?",
+      () => {
+        updateTaskField(task.individual_task_id, { binned: 1 })
+        closeConfirmModal()
+      },
+      "danger"
+    )
+  }
+
+  const handleEditTask = (task) => {
+    setEditingTask(task)
+    setFormData({
+      name: task.name || "",
+      priority: task.priority || "Medium",
+      deadline: task.deadline || "",
+      assignedTo: task.user_id || "",
+      description: task.description || "",
+    })
+    setShowModal(true)
   }
 
   const getEmployeeChartData = (userId) => {
     const employeeTasks = tasks.filter(
       (t) =>
-        parseInt(t.user_id) === parseInt(userId) &&
-        parseInt(t.binned) === 0
+        Number.parseInt(t.user_id) === Number.parseInt(userId) &&
+        Number.parseInt(t.binned) === 0,
     )
     const completed = employeeTasks.filter(
-      (t) => parseInt(t.status) === 1
+      (t) => Number.parseInt(t.status) === 1,
     ).length
     const remaining = employeeTasks.filter(
-      (t) => parseInt(t.status) === 0
+      (t) => Number.parseInt(t.status) === 0,
     ).length
     return {
       labels: ["Completed", "Remaining"],
@@ -250,80 +328,173 @@ const ManTasks = () => {
     }
   }
 
+  const getTaskStatusColor = (task) => {
+    if (Number.parseInt(task.binned) === 1) return "danger"
+    if (Number.parseInt(task.status) === 1) return "success"
+    return "primary"
+  }
+
   return (
     <Container fluid className="py-5 bg-light">
       <h1 className="text-center mb-5">Task Management Dashboard</h1>
 
-      {/* Employee Filter Section */}
-      <Form.Group controlId="employeeFilter" className="mb-4">
-        <Form.Label>Filter by Employee</Form.Label>
-        <div
-          tabIndex="0"
-          onFocus={() => setShowEmployeeOptions(true)}
-          onBlur={() => {
-            // Delay hiding to allow click events on options
-            setTimeout(() => setShowEmployeeOptions(false), 150)
-          }}
-        >
-          <Form.Control
-            type="text"
-            placeholder="Search employees..."
-            value={employeeFilterText}
-            onChange={(e) => setEmployeeFilterText(e.target.value)}
-            className="mb-2"
-          />
-          {showEmployeeOptions && (
-            <div className="list-group">
-              {users
-                .filter((user) => {
-                  if (user.role.toLowerCase() === "manager") return false
-                  const matchesSearch = user.name
-                    .toLowerCase()
-                    .includes(employeeFilterText.toLowerCase())
-                  const isSelected = selectedEmployees.includes(
-                    parseInt(user.user_id)
-                  )
-                  return matchesSearch || isSelected
-                })
-                .map((user) => (
+      {/* Filters Row */}
+      <Row className="mb-4">
+        <Col md={4}>
+          <Form.Group controlId="employeeFilter">
+            <Form.Label>Filter by Employee</Form.Label>
+            <div
+              tabIndex="0"
+              onFocus={() => setShowEmployeeOptions(true)}
+              onBlur={() => setTimeout(() => setShowEmployeeOptions(false), 150)}
+            >
+              <Form.Control
+                type="text"
+                placeholder="Search employees..."
+                value={employeeFilterText}
+                onChange={(e) => setEmployeeFilterText(e.target.value)}
+                className="mb-2"
+              />
+              {showEmployeeOptions && (
+                <div className="list-group">
+                  {users
+                    .filter((user) => {
+                      if (user.role.toLowerCase() === "manager") return false
+                      const matchesSearch = user.name
+                        .toLowerCase()
+                        .includes(employeeFilterText.toLowerCase())
+                      const isSelected = selectedEmployees.includes(
+                        Number.parseInt(user.user_id),
+                      )
+                      return matchesSearch || isSelected
+                    })
+                    .map((user) => (
+                      <Button
+                        key={user.user_id}
+                        variant="outline-secondary"
+                        className="list-group-item list-group-item-action"
+                        onClick={() => {
+                          addEmployee(Number.parseInt(user.user_id))
+                        }}
+                      >
+                        {user.name}
+                      </Button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-2">
+              {selectedEmployees.map((empId) => (
+                <Badge key={empId} bg="primary" pill className="me-1">
+                  {getUserName(empId)}{" "}
                   <Button
-                    key={user.user_id}
-                    variant="outline-secondary"
-                    className="list-group-item list-group-item-action"
-                    onClick={() => {
-                      if (!selectedEmployees.includes(parseInt(user.user_id))) {
-                        setSelectedEmployees((prev) => [...prev, parseInt(user.user_id)])
-                      }
+                    variant="link"
+                    onClick={() => removeEmployee(empId)}
+                    style={{
+                      color: "white",
+                      textDecoration: "none",
+                      padding: 0,
+                      fontSize: "0.8em",
                     }}
                   >
-                    {user.name}
+                    &times;
                   </Button>
-                ))}
+                </Badge>
+              ))}
             </div>
-          )}
-        </div>
-        <div className="mt-2">
-          {selectedEmployees.map((empId) => (
-            <Badge key={empId} bg="primary" pill className="me-1">
-              {getUserName(empId)}{" "}
+          </Form.Group>
+        </Col>
+        <Col md={4}>
+          <Form.Group controlId="priorityFilter">
+            <Form.Label>Filter by Priority</Form.Label>
+            <div
+              tabIndex="0"
+              onFocus={() => setShowPriorityOptions(true)}
+              onBlur={() => setTimeout(() => setShowPriorityOptions(false), 150)}
+            >
+              <Form.Control
+                type="text"
+                placeholder="Search priorities..."
+                value={priorityFilterText}
+                onChange={(e) => setPriorityFilterText(e.target.value)}
+                className="mb-2"
+              />
+              {showPriorityOptions && (
+                <div className="list-group">
+                  {priorityOptions
+                    .filter((option) => {
+                      const matchesSearch = option
+                        .toLowerCase()
+                        .includes(priorityFilterText.toLowerCase())
+                      const isSelected = selectedPriorities.includes(option)
+                      return matchesSearch || isSelected
+                    })
+                    .map((option) => (
+                      <Button
+                        key={option}
+                        variant="outline-secondary"
+                        className="list-group-item list-group-item-action"
+                        onClick={() => addPriority(option)}
+                      >
+                        {option}
+                      </Button>
+                    ))}
+                </div>
+              )}
+            </div>
+            <div className="mt-2">
+              {selectedPriorities.map((option) => (
+                <Badge key={option} bg="primary" pill className="me-1">
+                  {option}{" "}
+                  <Button
+                    variant="link"
+                    onClick={() => removePriority(option)}
+                    style={{
+                      color: "white",
+                      textDecoration: "none",
+                      padding: 0,
+                      fontSize: "0.8em",
+                    }}
+                  >
+                    &times;
+                  </Button>
+                </Badge>
+              ))}
+            </div>
+          </Form.Group>
+        </Col>
+        <Col md={4}>
+          <Form.Group controlId="deadlineFilter">
+            <Form.Label>Filter by Deadline</Form.Label>
+            <div className="d-flex align-items-center">
+              <Form.Control
+                type="date"
+                placeholder="From"
+                value={deadlineFilterStart}
+                onChange={(e) => setDeadlineFilterStart(e.target.value)}
+                className="me-2"
+              />
+              <Form.Control
+                type="date"
+                placeholder="To"
+                value={deadlineFilterEnd}
+                onChange={(e) => setDeadlineFilterEnd(e.target.value)}
+                className="me-2"
+              />
               <Button
-                variant="link"
-                onClick={() =>
-                  setSelectedEmployees((prev) => prev.filter((id) => id !== empId))
-                }
-                style={{
-                  color: "white",
-                  textDecoration: "none",
-                  padding: 0,
-                  fontSize: "0.8em",
+                variant="outline-secondary"
+                size="sm"
+                onClick={() => {
+                  setDeadlineFilterStart("")
+                  setDeadlineFilterEnd("")
                 }}
               >
-                &times;
+                Clear
               </Button>
-            </Badge>
-          ))}
-        </div>
-      </Form.Group>
+            </div>
+          </Form.Group>
+        </Col>
+      </Row>
 
       <div className="d-flex flex-wrap justify-content-between align-items-center mb-4">
         <Button
@@ -378,14 +549,17 @@ const ManTasks = () => {
             {userTasks.map((task) => (
               <Col md={6} lg={4} key={task.individual_task_id}>
                 <Card className="h-100 shadow-sm border-0">
+                  <Card.Header className={`bg-${getTaskStatusColor(task)} text-white`}>
+                    <h5 className="mb-0">{task.name}</h5>
+                  </Card.Header>
                   <Card.Body>
                     <div className="d-flex justify-content-between align-items-center mb-3">
                       <Form.Check
                         type="checkbox"
                         id={`task-${task.individual_task_id}`}
-                        checked={parseInt(task.status) === 1}
+                        checked={Number.parseInt(task.status) === 1}
                         onChange={() => handleStatusChange(task)}
-                        disabled={parseInt(task.binned) === 1}
+                        disabled={Number.parseInt(task.binned) === 1}
                       />
                       <Badge
                         bg={
@@ -400,18 +574,15 @@ const ManTasks = () => {
                         {task.priority}
                       </Badge>
                     </div>
-                    <h5 className="card-title mb-3">{task.name}</h5>
                     <p className="card-text text-muted mb-2">
-                      <small>
-                        Deadline: {new Date(task.deadline).toLocaleDateString()}
-                      </small>
+                      <small>Deadline: {new Date(task.deadline).toLocaleDateString()}</small>
                     </p>
                     <p className="card-text text-muted mb-3">
                       <small>
                         Status:{" "}
-                        {parseInt(task.binned) === 1
+                        {Number.parseInt(task.binned) === 1
                           ? "Binned"
-                          : parseInt(task.status) === 1
+                          : Number.parseInt(task.status) === 1
                           ? "Completed"
                           : "In Progress"}
                       </small>
@@ -420,25 +591,27 @@ const ManTasks = () => {
                       {task.description || "No description provided"}
                     </p>
                     <p className="card-text">
-                      <small className="text-muted">
-                        Assigned by: {getUserName(task.assigned_by)}
-                      </small>
+                      <small className="text-muted">Assigned by: {getUserName(task.assigned_by)}</small>
                     </p>
                     <div className="d-flex gap-2">
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => handleEditTask(task)}
-                      >
+                      <Button variant="outline-secondary" size="sm" onClick={() => handleEditTask(task)}>
                         <FiEdit />
                       </Button>
-                      {parseInt(task.binned) === 1 ? (
+                      {Number.parseInt(task.binned) === 1 ? (
                         <>
                           <Button
                             variant="outline-success"
                             size="sm"
                             onClick={() =>
-                              updateTaskField(task.individual_task_id, { binned: 0 })
+                              openConfirmModal(
+                                "Restore Task",
+                                "Are you sure you want to restore this task from the bin?",
+                                () => {
+                                  updateTaskField(task.individual_task_id, { binned: 0 })
+                                  closeConfirmModal()
+                                },
+                                "success" // Green button for restore
+                              )
                             }
                           >
                             Restore
@@ -446,7 +619,17 @@ const ManTasks = () => {
                           <Button
                             variant="outline-danger"
                             size="sm"
-                            onClick={() => handleDeleteTask(task.individual_task_id)}
+                            onClick={() =>
+                              openConfirmModal(
+                                "Delete Task",
+                                "Are you sure you want to permanently delete this task?",
+                                () => {
+                                  handleDeleteTask(task.individual_task_id)
+                                  closeConfirmModal()
+                                },
+                                "danger"
+                              )
+                            }
                           >
                             Delete
                           </Button>
@@ -488,9 +671,7 @@ const ManTasks = () => {
               <Form.Control
                 required
                 value={formData.name}
-                onChange={(e) =>
-                  setFormData({ ...formData, name: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -505,18 +686,14 @@ const ManTasks = () => {
               <Form.Select
                 required
                 value={formData.assignedTo}
-                onChange={(e) =>
-                  setFormData({ ...formData, assignedTo: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, assignedTo: e.target.value })}
               >
                 <option value="">Select Employee</option>
                 {users
                   .filter(
                     (user) =>
                       user.role.toLowerCase() !== "manager" &&
-                      user.name
-                        .toLowerCase()
-                        .includes(assignedToSearch.toLowerCase())
+                      user.name.toLowerCase().includes(assignedToSearch.toLowerCase()),
                   )
                   .map((user) => (
                     <option key={user.user_id} value={user.user_id}>
@@ -529,13 +706,11 @@ const ManTasks = () => {
               <Form.Label>Priority Level</Form.Label>
               <Form.Select
                 value={formData.priority}
-                onChange={(e) =>
-                  setFormData({ ...formData, priority: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
+                {priorityOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
@@ -544,9 +719,7 @@ const ManTasks = () => {
                 type="date"
                 required
                 value={formData.deadline}
-                onChange={(e) =>
-                  setFormData({ ...formData, deadline: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
               />
             </Form.Group>
             <Form.Group className="mb-3">
@@ -555,9 +728,7 @@ const ManTasks = () => {
                 as="textarea"
                 rows={3}
                 value={formData.description}
-                onChange={(e) =>
-                  setFormData({ ...formData, description: e.target.value })
-                }
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
             </Form.Group>
           </Modal.Body>
@@ -580,9 +751,7 @@ const ManTasks = () => {
 
       <Modal show={showChart} onHide={() => setShowChart(false)}>
         <Modal.Header closeButton>
-          <Modal.Title>
-            {selectedUser ? getUserName(selectedUser) : ""} Task Progress
-          </Modal.Title>
+          <Modal.Title>{selectedUser ? getUserName(selectedUser) : ""} Task Progress</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <div style={{ height: "300px" }}>
@@ -602,6 +771,24 @@ const ManTasks = () => {
             )}
           </div>
         </Modal.Body>
+      </Modal>
+
+      {/* Confirmation Modal */}
+      <Modal show={confirmModal.show} onHide={closeConfirmModal}>
+        <Modal.Header closeButton>
+          <Modal.Title>{confirmModal.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <p>{confirmModal.message}</p>
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={closeConfirmModal}>
+            Cancel
+          </Button>
+          <Button variant={confirmModal.variant} onClick={confirmModal.onConfirm}>
+            Confirm
+          </Button>
+        </Modal.Footer>
       </Modal>
     </Container>
   )
