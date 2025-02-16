@@ -325,7 +325,7 @@ const closeDropdown = () => {
             padding-right: 30px;
           }
           .custom-navbar {
-              background-color:rgb(229, 220, 220) !important;
+              background-color:rgb(232, 232, 236) !important;
               border-bottom: 2px solid #f8b400;
             }
           .navbar-nav .nav-link {
