@@ -54,7 +54,11 @@ const ManProjects = () => {
   const [selectedPriority, setSelectedPriority] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-
+  const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+  const [projectToDelete, setProjectToDelete] = useState(null); // Store the project to delete
+  const [actionType, setActionType] = useState(null); // 'bin' or 'delete'
+  const [showRestoreConfirmation, setShowRestoreConfirmation] = useState(false);
+  const [projectToRestore, setProjectToRestore] = useState(null);
 
   const fetchUsers = async () => {
     try {
@@ -225,20 +229,20 @@ const ManProjects = () => {
   const handleDeleteProject = async (projectId) => {
     try {
       const res = await fetch(`${API_URL}?action=deleteProject`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ project_id: projectId }),
-      })
-      const data = await res.json()
+      });
+      const data = await res.json();
       if (data.success) {
-        fetchProjects()
+        fetchProjects(); // Refresh the projects list
       } else {
-        alert("Delete failed: " + data.error)
+        alert("Delete failed: " + data.error);
       }
     } catch (err) {
-      console.error("Error deleting project", err)
+      console.error("Error deleting project", err);
     }
-  }
+  };
 
   const handleDeleteTask = async (taskId) => {
     try {
@@ -367,33 +371,39 @@ const ManProjects = () => {
             </Form.Group>
           </Col>
           <Col md={4}>
-            <Form.Group controlId="deadlineFilter" className="mb-3">
-              <Form.Label>Filter by Deadline</Form.Label>
-              <div className="d-flex gap-2">
+          <Form.Group controlId="deadlineFilter" className="mb-3">
+            <Form.Label>Filter by Deadline</Form.Label>
+            <div className="d-flex gap-2 align-items-center">
+              <div className="d-flex gap-2 align-items-center">
+                <Form.Label className="mb-0">From:</Form.Label>
                 <Form.Control
                   type="date"
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                   placeholder="Start Date"
                 />
+              </div>
+              <div className="d-flex gap-2 align-items-center">
+                <Form.Label className="mb-0">To:</Form.Label>
                 <Form.Control
                   type="date"
                   value={endDate}
                   onChange={(e) => setEndDate(e.target.value)}
                   placeholder="End Date"
                 />
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => {
-                    setStartDate("");
-                    setEndDate("");
-                  }}
-                  disabled={!startDate && !endDate}
-                >
-                  Clear
-                </Button>
               </div>
-            </Form.Group>
+              <Button
+                variant="outline-secondary"
+                onClick={() => {
+                  setStartDate("");
+                  setEndDate("");
+                }}
+                disabled={!startDate && !endDate}
+              >
+                Clear
+              </Button>
+            </div>
+          </Form.Group>
           </Col>
         </Row>
       </Form>
@@ -467,55 +477,80 @@ const ManProjects = () => {
                 {projList.map(project => (
                   <Col md={6} lg={4} key={project.project_id}>
                     <Card className={`h-100 border-${getStatusBadge(getProjectStatus(project))}`}>
-                      <Card.Header
-                        className={`bg-${getStatusBadge(getProjectStatus(project))} text-white d-flex justify-content-between align-items-center`}
-                      >
-                        <h5 className="mb-0">{project.name}</h5>
-                        <div>
+                    <Card.Header
+                      className={`bg-${getStatusBadge(getProjectStatus(project))} text-white d-flex justify-content-between align-items-center`}
+                    >
+                      <h5 className="mb-0">{project.name}</h5>
+                      <div>
+                        {/* Edit Button */}
+                        <Button
+                          variant="link"
+                          className="text-white p-0 me-2"
+                          onClick={() => {
+                            if (getProjectStatus(project) === 'binned') return;
+                            setEditingProject(project);
+                            setFormData({
+                              projectName: project.name,
+                              description: project.description,
+                              teamLeader: project.team_leader_id,
+                              employees: project.employees,
+                              priority: project.priority,
+                              deadline: project.deadline,
+                              tasks: project.tasks.map(task => ({
+                                name: task.task_name,
+                                assignee: task.user_id,
+                                id: task.task_id,
+                              })),
+                            });
+                            setShowModal(true);
+                          }}
+                          disabled={getProjectStatus(project) === 'binned'}
+                        >
+                          <FiEdit />
+                        </Button>
+
+                        {/* Bin/Delete Button */}
+                        {getProjectStatus(project) === 'binned' ? (
                           <Button
                             variant="link"
-                            className="text-white p-0 me-2"
+                            className="text-white p-0"
                             onClick={() => {
-                              if(getProjectStatus(project) === 'binned') return;
-                              setEditingProject(project)
-                              setFormData({
-                                projectName: project.name,
-                                description: project.description,
-                                teamLeader: project.team_leader_id,
-                                employees: project.employees,
-                                priority: project.priority,
-                                deadline: project.deadline,
-                                tasks: project.tasks.map(task => ({
-                                  name: task.task_name,
-                                  assignee: task.user_id,
-                                  id: task.task_id,
-                                })),
-                              })
-                              setShowModal(true)
+                              setProjectToDelete(project.project_id); // Store the project ID
+                              setActionType('delete'); // Set action type to 'delete'
+                              setShowDeleteConfirmation(true); // Show the confirmation modal
                             }}
-                            disabled={getProjectStatus(project) === 'binned'}
                           >
-                            <FiEdit />
+                            <FiTrash2 />
                           </Button>
-                          { getProjectStatus(project) === 'binned' ? (
-                            <Button
-                              variant="link"
-                              className="text-white p-0"
-                              onClick={() => handleDeleteProject(project.project_id)}
-                            >
-                              <FiTrash2 />
-                            </Button>
-                          ) : (
-                            <Button
-                              variant="link"
-                              className="text-white p-0"
-                              onClick={() => handleStatusChange(project.project_id, 'binned')}
-                            >
-                              <FiTrash2 />
-                            </Button>
-                          )}
-                        </div>
-                      </Card.Header>
+                        ) : (
+                          <Button
+                            variant="link"
+                            className="text-white p-0"
+                            onClick={() => {
+                              setProjectToDelete(project.project_id); // Store the project ID
+                              setActionType('bin'); // Set action type to 'bin'
+                              setShowDeleteConfirmation(true); // Show the confirmation modal
+                            }}
+                          >
+                            <FiTrash2 />
+                          </Button>
+                        )}
+
+                        {/* Restore Button */}
+                        {getProjectStatus(project) === 'binned' && (
+                          <Button
+                            variant="outline-success"
+                            size="sm"
+                            onClick={() => {
+                              setProjectToRestore(project.project_id); // Store the project ID
+                              setShowRestoreConfirmation(true); // Show the confirmation modal
+                            }}
+                          >
+                            <FiArchive className="me-1" /> Restore
+                          </Button>
+                        )}
+                      </div>
+                    </Card.Header>
                       <Card.Body>
                         <div className="d-flex justify-content-between align-items-center mb-3">
                           <ProgressBar
@@ -794,6 +829,83 @@ const ManProjects = () => {
           </Modal.Footer>
         </Form>
       </Modal>
+
+      <Modal
+        show={showRestoreConfirmation}
+        onHide={() => {
+          setShowRestoreConfirmation(false);
+          setProjectToRestore(null); // Clear the project ID
+        }}
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Restore</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to restore this project? The project will be moved back to the "Active" section.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowRestoreConfirmation(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="success"
+            onClick={() => {
+              if (projectToRestore) {
+                handleStatusChange(projectToRestore, 'active'); // Restore the project
+              }
+              setShowRestoreConfirmation(false); // Close the modal
+              setProjectToRestore(null); // Clear the project ID
+            }}
+          >
+            Restore Project
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
+      <Modal
+        show={showDeleteConfirmation}
+        onHide={() => {
+          setShowDeleteConfirmation(false);
+          setActionType(null); // Reset action type
+          setProjectToDelete(null); // Clear the project ID
+        }}
+        backdrop="static"
+        keyboard={false}
+      >
+        <Modal.Header closeButton>
+          <Modal.Title>Confirm Action</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          Are you sure you want to {actionType === 'bin' ? 'bin' : 'permanently delete'} this project? This action cannot be undone.
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowDeleteConfirmation(false)}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            onClick={() => {
+              if (projectToDelete) {
+                if (actionType === 'bin') {
+                  // Bin the project
+                  handleStatusChange(projectToDelete, 'binned');
+                } else if (actionType === 'delete') {
+                  // Delete the project permanently
+                  handleDeleteProject(projectToDelete);
+                }
+              }
+              setShowDeleteConfirmation(false); // Close the modal
+              setActionType(null); // Reset action type
+              setProjectToDelete(null); // Clear the project ID
+            }}
+          >
+            {actionType === 'bin' ? 'Bin Project' : 'Delete Project'}
+          </Button>
+        </Modal.Footer>
+      </Modal>
+
 
       <Modal show={showProjectChart} onHide={() => { setShowProjectChart(false); setSelectedProject(null); }}>
         <Modal.Header closeButton>
