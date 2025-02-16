@@ -172,13 +172,28 @@ function TopicsList({ userId }) {
           <p className="lead text-muted">No topics yet. Create one to get started!</p>
         </div>
       ) : (
-        <div className="row g-4">
+        <div className="row g-3">
           {topics.map(topic => {
             const isTechnical = Number(topic.technical) === 1;
             const isOwner = Number(topic.created_by) === Number(userId);
             return (
               <div key={topic.topic_id} className="col-12">
-                <div className="card h-100 border-0 shadow-sm">
+                <div 
+                  className="card h-100 shadow-sm"
+                  style={{
+                    transition: 'transform 0.3s ease, box-shadow 0.3s ease',
+                    cursor: 'pointer',
+                    borderLeft: `4px solid ${isTechnical ? '#71c8ec' : '#6f757c'}`,  // Defined border
+                    borderRadius: '8px',  // Rounded corners
+                    padding: '0px',  // Add spacing inside
+                    backgroundColor: 'white',  // Clean background
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
+                    marginLeft: '0px',  // Reset left margin if needed
+                    overflow: 'visible'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={(e) => e.currentTarget.style.transform = 'translateY(0)'}
+                >
                   <Link 
                     to={`topic/${topic.topic_id}`} 
                     className="text-decoration-none text-dark"
@@ -680,12 +695,22 @@ function TopicView({ userId }) {
           <p className="lead text-muted">No posts yet. Be the first to create one!</p>
         </div>
       ) : (
-        <div className="row g-4">
+        <div className="row g-3">
           {posts.map(post => {
             const isOwner = Number(post.user_id) === Number(userId);
             return (
               <div key={post.post_id} className="col-12">
-                <div className="card border-0 shadow-sm">
+                <div 
+                  className="card shadow-sm"
+                  style={{
+                    borderRadius: '8px',  // Rounded corners
+                    backgroundColor: 'white',  // Clean background
+                    boxShadow: '0px 4px 10px rgba(0, 0, 0, 0.15)',  // Full shadow effect
+                    marginLeft: '0px',  // Reset left margin if needed
+                    overflow: 'visible',
+                  }}
+                >
+
                   <div className="card-body">
                     <div className="d-flex justify-content-between mb-3">
                       <div className="d-flex align-items-center">
