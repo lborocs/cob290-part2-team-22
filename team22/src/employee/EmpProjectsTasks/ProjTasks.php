@@ -387,6 +387,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         exit();
     }
+
+    // -----------------------------
+    // Tick off an individual task
+    // -----------------------------
+    if ($action == 'updateIndividualTask') {
+        $task_id = intval($data['individual_task_id']);
+        $user_id = intval($data['user_id']);
+        $status = intval($data['status']);
+
+        $query = "UPDATE individual_tasks SET status = ? WHERE individual_task_id = ? AND user_id = ?";
+        $stmt = $mysqli->prepare($query);
+        $stmt->bind_param("iii", $status, $task_id, $user_id);
+
+        if ($stmt->execute()) {
+            echo json_encode(["success" => true]);
+        } else {
+            echo json_encode(["error" => "Failed to update task status"]);
+        }
+        exit();
+    }
 }
 
 $mysqli->close();

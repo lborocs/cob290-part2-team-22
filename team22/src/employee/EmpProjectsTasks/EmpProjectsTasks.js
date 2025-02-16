@@ -40,7 +40,12 @@ const EmpProjectsTasks = ( {userId} ) => {
     completed: false,
   })
   const [showProgressModal, setShowProgressModal] = useState(false)
-  const [progressView, setProgressView] = useState({})
+  const [progressView, setProgressView] = useState(() => {
+    return projects.reduce((acc, project) => {
+      acc[project.project_id] = "user"; 
+      return acc;
+    }, {});
+  });
   const [teamLeaders, setTeamLeaders] = useState({});
   const isTeamLeader = (projectId) => {
     const leaderId = teamLeaders[projectId];
@@ -571,29 +576,30 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          task_id: taskId,
+          individual_task_id: taskId,
           user_id: userId,
-          status: currentStatus === 1 ? 0 : 1,
+          status: currentStatus === 1 ? 0 : 1, // Toggle status
         }),
-      })
-      const data = await res.json()
+      });
+
+      const data = await res.json();
 
       if (data.success) {
-        console.log("Individual task updated successfully:", data)
+        console.log("Individual task updated successfully:", data);
         setIndividualTasks((prevTasks) =>
           prevTasks.map((task) =>
             task.individual_task_id === taskId
               ? { ...task, status: currentStatus === 1 ? 0 : 1 }
               : task
           )
-        )
+        );
       } else {
-        console.error("Error updating individual task:", data.error)
+        console.error("Error updating individual task:", data.error);
       }
     } catch (err) {
-      console.error("Error updating individual task:", err)
+      console.error("Error updating individual task:", err);
     }
-  }
+  };
 
   const toggleView = (option) => {
     setViewOptions((prev) => ({ ...prev, [option]: !prev[option] }))
@@ -724,50 +730,63 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
                   </Card.Text>
                   <div className="mb-3">
                     <div className="d-flex justify-content-between align-items-center mb-2">
-                      <span>
-                        {progressView[project.project_id] === "user"
-                          ? "Your Progress"
-                          : "Team Progress"}
-                      </span>
-                      <Button
-                        variant="outline-secondary"
-                        size="sm"
-                        onClick={() => toggleProgressView(project.project_id)}
-                      >
-                        {progressView[project.project_id] === "user" ? (
-                          <FiUsers />
-                        ) : (
-                          <FiUser />
-                        )}
-                      </Button>
+                    <span>
+                      {progressView[project.project_id] === "user"
+                        ? "Your Progress"
+                        : "Team Progress"}
+                    </span>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      onClick={() => toggleProgressView(project.project_id)}
+                    >
+                      {progressView[project.project_id] === "user" ? <FiUsers /> : <FiUser />}
+                    </Button>
+
+
+                      
                     </div>
                     {progressView[project.project_id] === "user" ? (
                       tasks[project.project_id] && tasks[project.project_id].length > 0 ? (
-                        <ProgressBar
-                          now={project.user_progress}
-                          variant={project.user_progress >= 100 ? "success" : "primary"}
-                          style={{ position: "relative" }}
-                        >
+                        <div style={{ position: "relative" }}>
+                          <ProgressBar
+                            now={project.user_progress}
+                            variant={project.user_progress >= 100 ? "success" : "primary"}
+                            style={{ height: "20px", position: "relative" }}
+                          />
                           <div
                             style={{
                               position: "absolute",
                               top: "50%",
                               left: "50%",
                               transform: "translate(-50%, -50%)",
-                              color: project.user_progress === 0 ? "black" : "transparent",
+                              color: "#fff",
                               fontWeight: "bold",
                             }}
                           >
-                            {project.user_progress === 0 ? "0%" : ""}
+                            {project.user_progress === 0 ? "0%" : `${Math.round(project.user_progress)}%`}
                           </div>
-                          <ProgressBar
-                            now={project.user_progress}
-                            label={`${Math.round(project.user_progress)}%`}
-                            variant={project.user_progress >= 100 ? "success" : "primary"}
-                          />
-                        </ProgressBar>
+                        </div>
                       ) : (
-                        <div style={{ textAlign: "center", fontWeight: "bold" }}>N/A</div>
+                        <div style={{ position: "relative", width: "100%" }}>
+                          <ProgressBar
+                            now={0}
+                            variant="secondary"
+                            style={{ height: "20px", backgroundColor: "#e9ecef" }}
+                          />
+                          <div
+                            style={{
+                              position: "absolute",
+                              top: "50%",
+                              left: "50%",
+                              transform: "translate(-50%, -50%)",
+                              color: "#000",
+                              fontWeight: "bold",
+                            }}
+                          >
+                            N/A
+                          </div>
+                        </div>
                       )
                     ) : (
                       <ProgressBar
@@ -776,69 +795,75 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
                         variant={project.team_progress >= 100 ? "success" : "primary"}
                       />
                     )}
+
                   </div>
 
-                  <Button
-                    variant="outline-primary"
-                    className="mt-auto"
-                    onClick={() => {
-                      setExpandedProjects((prev) => ({
-                        ...prev,
-                        [project.project_id]:
-                          !prev[project.project_id],
-                      }))
-                      if (!tasks[project.project_id]) {
-                        fetchTasks(project.project_id)
-                      }
-                    }}
-                  >
-                    {expandedProjects[project.project_id]
-                      ? "Hide Tasks"
-                      : "View My Tasks"}
-                  </Button>
 
-                  {expandedProjects[project.project_id] &&
-                    tasks[project.project_id] && (
-                    <ListGroup className="mt-3">
-                      {tasks[project.project_id].length > 0 ? (
-                        tasks[project.project_id].map((task) => (
-                          <ListGroup.Item
-                            key={task.task_id}
-                            className="d-flex justify-content-between align-items-center"
-                          >
-                            <div className="form-check">
-                              <input
-                                type="checkbox"
-                                className="form-check-input"
-                                checked={task.status === 1} // Ensure this is correctly bound to the task status
-                                onChange={() =>
-                                  handleTaskToggle(
-                                    project.project_id,
-                                    task.task_id,
-                                    task.status
-                                  )
-                                }
-                                id={`task-${task.task_id}`}
-                              />
-                              <label
-                                className="form-check-label"
-                                htmlFor={`task-${task.task_id}`}
-                              >
-                                {task.task_name}
-                              </label>
-                            </div>
-                            {task.status === 1 && (
-                              <FiCheckCircle className="text-success" />
-                            )}
-                          </ListGroup.Item>
-                        ))
-                      ) : (
-                        <ListGroup.Item>
-                          No tasks assigned to you for this project.
-                        </ListGroup.Item>
-                      )}
-                    </ListGroup>
+
+                  {/* Button stays fixed in its position and maintains full width */}
+                  <div className="d-flex justify-content-center">
+                    <Button
+                      variant="outline-primary"
+                      className="w-100" // Ensures button maintains full width
+                      onClick={() => {
+                        setExpandedProjects((prev) => ({
+                          ...prev,
+                          [project.project_id]: !prev[project.project_id],
+                        }));
+                        if (!tasks[project.project_id]) {
+                          fetchTasks(project.project_id);
+                        }
+                      }}
+                    >
+                      {expandedProjects[project.project_id] ? "Hide Tasks" : "View My Tasks"}
+                    </Button>
+                  </div>
+
+                  {/* Expanding task list below button */}
+                  <div style={{
+                    maxHeight: expandedProjects[project.project_id] ? "500px" : "0px",
+                    overflow: "hidden",
+                    transition: "max-height 0.3s ease-in-out"
+                  }}>
+                    {expandedProjects[project.project_id] && tasks[project.project_id] && (
+                      <ListGroup className="mt-3">
+                        {tasks[project.project_id].length > 0 ? (
+                          tasks[project.project_id].map((task) => (
+                            <ListGroup.Item
+                              key={task.task_id}
+                              className="d-flex justify-content-between align-items-center"
+                            >
+                              <div className="form-check">
+                                <input
+                                  type="checkbox"
+                                  className="form-check-input"
+                                  checked={task.status === 1}
+                                  onChange={() =>
+                                    handleTaskToggle(
+                                      project.project_id,
+                                      task.task_id,
+                                      task.status
+                                    )
+                                  }
+                                  id={`task-${task.task_id}`}
+                                />
+                                <label className="form-check-label" htmlFor={`task-${task.task_id}`}>
+                                  {task.task_name}
+                                </label>
+                              </div>
+                              {task.status === 1 && <FiCheckCircle className="text-success" />}
+                            </ListGroup.Item>
+                          ))
+                        ) : (
+                          <ListGroup.Item>No tasks assigned to you for this project.</ListGroup.Item>
+                        )}
+                      </ListGroup>
                     )}
+                  </div>
+
+
+
+
                 </Card.Body>
               </Card>
             </Col>
@@ -856,14 +881,15 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
               <ListGroup.Item
                 key={task.individual_task_id}
                 id={`individual-task-${index}`}
-                className="d-flex justify-content-between align-items-start py-3 border-left border-3"
+                className="d-flex justify-content-between align-items-start py-3"
                 style={{
-                  borderLeftColor:
-                    task.priority === "high"
-                      ? "#dc3545"
-                      : task.priority === "medium"
-                      ? "#ffc107"
-                      : "#17a2b8",
+                  borderLeft: `5px solid ${
+                    task.priority.toLowerCase() === "high"
+                      ? "rgb(220, 53, 69)" // Red for High Priority
+                      : task.priority.toLowerCase() === "medium"
+                      ? "rgb(255, 193, 7)" // Yellow for Medium Priority
+                      : "rgb(23, 162, 184)" // Blue for Low Priority
+                  }`,
                   borderRadius: "10px",
                   marginBottom: "10px",
                   boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
@@ -871,9 +897,9 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
                   cursor: "pointer",
                   backgroundColor: task.status === 1 ? "#f8f9fa" : "transparent", // Highlight completed tasks
                 }}
-                onMouseEnter={(e) => (e.currentTarget.style.transform = "translateY(-2px)")}
-                onMouseLeave={(e) => (e.currentTarget.style.transform = "translateY(0)")}
               >
+
+           
                 <div className="ms-2 me-auto" style={{ flexGrow: 1 }}>
                   <div className="d-flex align-items-center">
                     <Form.Check
@@ -888,15 +914,19 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
                       {task.name}
                     </h5>
                     <Badge
-                      bg={
-                        task.priority === "high"
-                          ? "danger"
-                          : task.priority === "medium"
-                          ? "warning"
-                          : "info"
-                      }
+                      bg="custom" // Use a custom class for styling
                       className="ms-2"
-                      style={{ borderRadius: "10px", padding: "5px 10px" }}
+                      style={{
+                        borderRadius: "10px",
+                        padding: "5px 10px",
+                        backgroundColor:
+                          task.priority === "High"
+                            ? "#dc3545" // Red
+                            : task.priority === "Medium"
+                            ? "#ffc107" // Yellow
+                            : "#17a2b8", // Blue
+                        color: task.priority === "medium" ? "#000" : "#fff", // Black text for yellow background
+                      }}
                     >
                       {task.priority}
                     </Badge>
