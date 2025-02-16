@@ -179,50 +179,59 @@ function TopicsList({ userId }) {
             return (
               <div key={topic.topic_id} className="col-12">
                 <div className="card h-100 border-0 shadow-sm">
-                  <div className="card-body">
-                    <div className="d-flex justify-content-between">
-                      <h3 className="h5 mb-3">
-                        <Link to={`topic/${topic.topic_id}`} className="text-decoration-none text-dark">
+                  <Link 
+                    to={`topic/${topic.topic_id}`} 
+                    className="text-decoration-none text-dark"
+                    style={{ display: 'contents' }} // Makes the link inherit parent dimensions
+                  >
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between">
+                        <h3 className="h5 mb-3">
                           {topic.title}
-                        </Link>
-                      </h3>
-                      {isOwner && (
-                        <div className="dropdown">
-                          <button
-                            className="btn btn-light btn-sm"
-                            type="button"
-                            data-bs-toggle="dropdown"
-                          >
-                            <i className="bi bi-three-dots"></i>
-                          </button>
-                          <ul className="dropdown-menu dropdown-menu-end">
-                            <li>
-                              <button
-                                className="dropdown-item text-danger"
-                                onClick={() => { setShowDeleteModal(true); setTopicToDelete(topic); }}
-                              >
-                                <i className="bi bi-trash me-2"></i> Delete
-                              </button>
-                            </li>
-                          </ul>
-                        </div>
-                      )}
+                        </h3>
+                        {isOwner && (
+                          <div className="dropdown" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              className="btn btn-light btn-sm"
+                              type="button"
+                              data-bs-toggle="dropdown"
+                              onClick={(e) => e.preventDefault()}
+                            >
+                              <i className="bi bi-three-dots"></i>
+                            </button>
+                            <ul className="dropdown-menu dropdown-menu-end">
+                              <li>
+                                <button
+                                  className="dropdown-item text-danger"
+                                  onClick={(e) => { 
+                                    e.preventDefault();
+                                    setShowDeleteModal(true); 
+                                    setTopicToDelete(topic); 
+                                  }}
+                                >
+                                  <i className="bi bi-trash me-2"></i> Delete
+                                </button>
+                              </li>
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-muted mb-3">{topic.description}</p>
+                      <div className="d-flex flex-wrap gap-3 align-items-center">
+                        <span className="badge bg-light text-dark border">
+                          <i className="bi bi-person me-1"></i>
+                          {topic.creator_name}
+                        </span>
+                        <span className="badge bg-light text-dark border">
+                          <i className="bi bi-clock me-1"></i>
+                          {new Date(topic.date_time).toLocaleDateString()}
+                        </span>
+                        <span className={`badge ${isTechnical ? 'bg-info' : 'bg-secondary'}`}>
+                          {isTechnical ? 'Technical' : 'Non-Technical'}
+                        </span>
+                      </div>
                     </div>
-                    <p className="text-muted mb-3">{topic.description}</p>
-                    <div className="d-flex flex-wrap gap-3 align-items-center">
-                      <span className="badge bg-light text-dark border">
-                        <i className="bi bi-person me-1"></i>
-                        {topic.creator_name}
-                      </span>
-                      <span className="badge bg-light text-dark border">
-                        <i className="bi bi-clock me-1"></i>
-                        {new Date(topic.date_time).toLocaleDateString()}
-                      </span>
-                      <span className={`badge ${isTechnical ? 'bg-info' : 'bg-secondary'}`}>
-                        {isTechnical ? 'Technical' : 'Non-Technical'}
-                      </span>
-                    </div>
-                  </div>
+                  </Link>
                 </div>
               </div>
             );
