@@ -43,6 +43,8 @@ const initialFormData = {
   tasks: [{ name: "", assignee: "", id: Date.now() }],
 }
 
+const projectPriorityOptions = ["Low", "Medium", "High"]
+
 const ManProjects = () => {
   const [showModal, setShowModal] = useState(false)
   const [showProjectChart, setShowProjectChart] = useState(false)
@@ -56,10 +58,16 @@ const ManProjects = () => {
   const [projects, setProjects] = useState([])
   const [users, setUsers] = useState([])
   const [formData, setFormData] = useState(initialFormData)
-  // New filtering states:
-  const [selectedTeamLeader, setSelectedTeamLeader] = useState(null)
+
+  // Filtering states
+  // Team Leader Filter (multiple selection with search)
+  const [selectedTeamLeaders, setSelectedTeamLeaders] = useState([])
+  const [teamLeaderSearchText, setTeamLeaderSearchText] = useState("")
+
+  // Priority Filter (multiple selection without search)
+  const [selectedPriorities, setSelectedPriorities] = useState([])
+
   const [deadlineDays, setDeadlineDays] = useState("")
-  const [selectedPriority, setSelectedPriority] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false)
@@ -67,6 +75,13 @@ const ManProjects = () => {
   const [actionType, setActionType] = useState(null) // 'bin' or 'delete'
   const [showRestoreConfirmation, setShowRestoreConfirmation] = useState(false)
   const [projectToRestore, setProjectToRestore] = useState(null)
+
+  // For employee search in project creation modal
+  const [employeeSearchText, setEmployeeSearchText] = useState("")
+
+  // New state for Team Leader search inside the modal (only one allowed)
+  const [teamLeaderModalSearchText, setTeamLeaderModalSearchText] = useState("")
+  const [showTeamLeaderDropdown, setShowTeamLeaderDropdown] = useState(false)
 
   const fetchUsers = async () => {
     try {
@@ -93,27 +108,28 @@ const ManProjects = () => {
     fetchProjects()
   }, [])
 
-  // When projects update, update the selectedTeamLeaders filter
-  // Remove any team leader ID that no longer appears in any project.
-
   const getProjectStatus = (project) => {
     if (Number.parseInt(project.binned) === 1) return "binned"
     if (Number.parseInt(project.completed) === 1) return "completed"
     return "active"
   }
 
-  // Group projects by status after applying team leader and deadline filters.
+  // Group projects by status after applying filters.
   const groupProjectsByStatus = () => {
     let filteredProjects = projects
 
-    // Filter by team leader
-    if (selectedTeamLeader) {
-      filteredProjects = filteredProjects.filter((project) => project.team_leader_id.toString() === selectedTeamLeader)
+    // Filter by team leaders (if any selected)
+    if (selectedTeamLeaders.length > 0) {
+      filteredProjects = filteredProjects.filter((project) =>
+        selectedTeamLeaders.includes(String(project.team_leader_id))
+      )
     }
 
-    // Filter by priority
-    if (selectedPriority) {
-      filteredProjects = filteredProjects.filter((project) => project.priority === selectedPriority)
+    // Filter by priority (if any selected)
+    if (selectedPriorities.length > 0) {
+      filteredProjects = filteredProjects.filter((project) =>
+        selectedPriorities.includes(project.priority)
+      )
     }
 
     // Filter by deadline range
@@ -206,6 +222,7 @@ const ManProjects = () => {
     setShowModal(false)
     setEditingProject(null)
     setFormData(initialFormData)
+    setTeamLeaderModalSearchText("")
   }
 
   const updateProjectField = async (projectId, updateData) => {
@@ -308,16 +325,50 @@ const ManProjects = () => {
     }))
   }
 
-  // Handler for team leader filter (multiple selection) in the filtering dropdown.
-  // This dropdown now shows only users with role "team leader" who have at least one project.
-
-  // Compute the available team leaders for filtering based on current projects.
+  // For filtering: Compute the available team leaders for filtering based on current projects.
   const availableTeamLeaders = users.filter(
     (user) =>
       user.role &&
       user.role.toLowerCase() === "team leader" &&
-      projects.some((project) => project.team_leader_id == user.user_id),
+      projects.some((project) => project.team_leader_id == user.user_id)
   )
+
+  // Functions for team leader filter with tags (for filtering outside the modal)
+  const addTeamLeader = (id) => {
+    const idStr = String(id)
+    if (!selectedTeamLeaders.includes(idStr)) {
+      setSelectedTeamLeaders([...selectedTeamLeaders, idStr])
+    }
+  }
+
+  const removeTeamLeader = (id) => {
+    const idStr = String(id)
+    setSelectedTeamLeaders(selectedTeamLeaders.filter((item) => item !== idStr))
+  }
+
+  // Functions for priority filter with tags
+  const addPriority = (priority) => {
+    if (!selectedPriorities.includes(priority)) {
+      setSelectedPriorities([...selectedPriorities, priority])
+    }
+  }
+
+  const removePriority = (priority) => {
+    setSelectedPriorities(selectedPriorities.filter((p) => p !== priority))
+  }
+
+  // Functions for employee selection in project creation modal
+  const addEmployeeToForm = (empId) => {
+    const idStr = String(empId)
+    if (!formData.employees.includes(idStr)) {
+      setFormData({ ...formData, employees: [...formData.employees, idStr] })
+    }
+  }
+
+  const removeEmployeeFromForm = (empId) => {
+    const idStr = String(empId)
+    setFormData({ ...formData, employees: formData.employees.filter((e) => e !== idStr) })
+  }
 
   return (
     <Container fluid className="py-4 bg-light">
@@ -329,45 +380,74 @@ const ManProjects = () => {
           <Col md={4}>
             <Form.Group controlId="teamLeaderFilter" className="mb-3">
               <Form.Label>Filter by Team Leader</Form.Label>
-              <div className="d-flex gap-2">
-                <Form.Select
-                  value={selectedTeamLeader || ""}
-                  onChange={(e) => setSelectedTeamLeader(e.target.value || null)}
-                >
-                  <option value="">All Team Leaders</option>
-                  {availableTeamLeaders.map((user) => (
-                    <option key={user.user_id} value={user.user_id}>
+              <Form.Control
+                type="text"
+                placeholder="Search team leaders..."
+                value={teamLeaderSearchText}
+                onChange={(e) => setTeamLeaderSearchText(e.target.value)}
+              />
+              <div className="mt-2">
+                {availableTeamLeaders
+                  .filter((user) =>
+                    user.name.toLowerCase().includes(teamLeaderSearchText.toLowerCase())
+                  )
+                  .map((user) => (
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      className="me-2 mb-2"
+                      key={user.user_id}
+                      onClick={() => addTeamLeader(user.user_id)}
+                    >
                       {user.name}
-                    </option>
+                    </Button>
                   ))}
-                </Form.Select>
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => setSelectedTeamLeader(null)}
-                  disabled={!selectedTeamLeader}
-                >
-                  Clear
-                </Button>
+              </div>
+              <div className="mt-2">
+                {selectedTeamLeaders.map((id) => (
+                  <Badge pill bg="primary" className="me-1" key={id}>
+                    {getUserName(id)}{" "}
+                    <Button
+                      variant="link"
+                      style={{ color: "white", padding: 0 }}
+                      onClick={() => removeTeamLeader(id)}
+                    >
+                      &times;
+                    </Button>
+                  </Badge>
+                ))}
               </div>
             </Form.Group>
           </Col>
           <Col md={4}>
             <Form.Group controlId="priorityFilter" className="mb-3">
               <Form.Label>Filter by Priority</Form.Label>
-              <div className="d-flex gap-2">
-                <Form.Select value={selectedPriority} onChange={(e) => setSelectedPriority(e.target.value)}>
-                  <option value="">All Priorities</option>
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
-                </Form.Select>
-                <Button
-                  variant="outline-secondary"
-                  onClick={() => setSelectedPriority("")}
-                  disabled={!selectedPriority}
-                >
-                  Clear
-                </Button>
+              <div className="mt-2">
+                {projectPriorityOptions.map((option) => (
+                  <Button
+                    variant="outline-secondary"
+                    size="sm"
+                    className="me-2 mb-2"
+                    key={option}
+                    onClick={() => addPriority(option)}
+                  >
+                    {option}
+                  </Button>
+                ))}
+              </div>
+              <div className="mt-2">
+                {selectedPriorities.map((option) => (
+                  <Badge pill bg="primary" className="me-1" key={option}>
+                    {option}{" "}
+                    <Button
+                      variant="link"
+                      style={{ color: "white", padding: 0 }}
+                      onClick={() => removePriority(option)}
+                    >
+                      &times;
+                    </Button>
+                  </Badge>
+                ))}
               </div>
             </Form.Group>
           </Col>
@@ -498,6 +578,7 @@ const ManProjects = () => {
                                 })),
                               })
                               setShowModal(true)
+                              setTeamLeaderModalSearchText("")
                             }}
                             disabled={getProjectStatus(project) === "binned"}
                           >
@@ -584,7 +665,7 @@ const ManProjects = () => {
                               onClick={() =>
                                 handleStatusChange(
                                   project.project_id,
-                                  getProjectStatus(project) === "completed" ? "active" : "completed",
+                                  getProjectStatus(project) === "completed" ? "active" : "completed"
                                 )
                               }
                             >
@@ -675,7 +756,7 @@ const ManProjects = () => {
                 ))}
               </Row>
             </div>
-          ),
+          )
       )}
 
       <Modal
@@ -703,43 +784,102 @@ const ManProjects = () => {
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Team Leader</Form.Label>
-              <Form.Select
-                required
-                value={formData.teamLeader}
-                onChange={(e) => setFormData({ ...formData, teamLeader: e.target.value })}
-              >
-                <option value="">Select Team Leader</option>
-                {/* In the modal, show all employees except managers */}
-                {users
-                  .filter((user) => user.role && user.role.toLowerCase() !== "manager")
-                  .map((user) => (
-                    <option key={user.user_id} value={user.user_id}>
-                      {user.name}
-                    </option>
-                  ))}
-              </Form.Select>
+              {/* Team Leader search functionality for modal.
+                  The dropdown appears only when the search box is focused. */}
+              {!formData.teamLeader && (
+                <>
+                  <Form.Control
+                    type="text"
+                    placeholder="Search team leader..."
+                    value={teamLeaderModalSearchText}
+                    onChange={(e) => setTeamLeaderModalSearchText(e.target.value)}
+                    onFocus={() => setShowTeamLeaderDropdown(true)}
+                    onBlur={() => setTimeout(() => setShowTeamLeaderDropdown(false), 150)}
+                  />
+                  {showTeamLeaderDropdown && (
+                    <div className="list-group mt-2">
+                      {users
+                        .filter(
+                          (user) =>
+                            user.role &&
+                            user.role.toLowerCase() !== "manager" &&
+                            user.name.toLowerCase().includes(teamLeaderModalSearchText.toLowerCase())
+                        )
+                        .map((user) => (
+                          <Button
+                            variant="outline-secondary"
+                            size="sm"
+                            className="list-group-item list-group-item-action"
+                            key={user.user_id}
+                            onClick={() => {
+                              setFormData({ ...formData, teamLeader: user.user_id })
+                              setTeamLeaderModalSearchText(user.name)
+                            }}
+                          >
+                            {user.name}
+                          </Button>
+                        ))}
+                    </div>
+                  )}
+                </>
+              )}
+              {formData.teamLeader && (
+                <div className="mt-2">
+                  <Badge pill bg="primary">
+                    {getUserName(formData.teamLeader)}{" "}
+                    <Button
+                      variant="link"
+                      style={{ color: "white", padding: 0 }}
+                      onClick={() => setFormData({ ...formData, teamLeader: "" })}
+                    >
+                      &times;
+                    </Button>
+                  </Badge>
+                </div>
+              )}
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Assign Employees</Form.Label>
-              <Form.Select
-                multiple
-                value={formData.employees}
-                onChange={(e) =>
-                  setFormData({
-                    ...formData,
-                    employees: Array.from(e.target.selectedOptions, (option) => option.value),
-                  })
-                }
-              >
+              <Form.Control
+                type="text"
+                placeholder="Search employees..."
+                value={employeeSearchText}
+                onChange={(e) => setEmployeeSearchText(e.target.value)}
+              />
+              <div className="mt-2">
                 {users
-                  .filter((user) => user.role && user.role.toLowerCase() !== "manager")
+                  .filter(
+                    (user) =>
+                      user.role &&
+                      user.role.toLowerCase() !== "manager" &&
+                      user.name.toLowerCase().includes(employeeSearchText.toLowerCase())
+                  )
                   .map((user) => (
-                    <option key={user.user_id} value={user.user_id}>
+                    <Button
+                      variant="outline-secondary"
+                      size="sm"
+                      className="me-2 mb-2"
+                      key={user.user_id}
+                      onClick={() => addEmployeeToForm(user.user_id)}
+                    >
                       {user.name}
-                    </option>
+                    </Button>
                   ))}
-              </Form.Select>
-              <Form.Text className="text-muted">Hold CTRL/CMD to select multiple employees</Form.Text>
+              </div>
+              <div className="mt-2">
+                {formData.employees.map((empId) => (
+                  <Badge pill bg="primary" className="me-1" key={empId}>
+                    {getUserName(empId)}{" "}
+                    <Button
+                      variant="link"
+                      style={{ color: "white", padding: 0 }}
+                      onClick={() => removeEmployeeFromForm(empId)}
+                    >
+                      &times;
+                    </Button>
+                  </Badge>
+                ))}
+              </div>
             </Form.Group>
             <Form.Group className="mb-3">
               <Form.Label>Priority Level</Form.Label>
@@ -747,9 +887,9 @@ const ManProjects = () => {
                 value={formData.priority}
                 onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
               >
-                <option>Low</option>
-                <option>Medium</option>
-                <option>High</option>
+                {projectPriorityOptions.map((option) => (
+                  <option key={option}>{option}</option>
+                ))}
               </Form.Select>
             </Form.Group>
             <Form.Group className="mb-3">
@@ -790,7 +930,7 @@ const ManProjects = () => {
                       (user) =>
                         user.role &&
                         user.role.toLowerCase() !== "manager" &&
-                        formData.employees.includes(user.user_id.toString()),
+                        formData.employees.includes(user.user_id.toString())
                     )
                     .map((user) => (
                       <option key={user.user_id} value={user.user_id}>
@@ -939,4 +1079,3 @@ const ManProjects = () => {
 }
 
 export default ManProjects
-
