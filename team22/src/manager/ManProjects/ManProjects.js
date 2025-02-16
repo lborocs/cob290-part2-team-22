@@ -878,7 +878,7 @@ const ManProjects = () => {
           <Modal.Title>Confirm Action</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          Are you sure you want to {actionType === 'bin' ? 'bin' : 'permanently delete'} this project? This action cannot be undone.
+          Are you sure you want to {actionType === 'bin' ? 'bin' : 'permanently delete'} this project?
         </Modal.Body>
         <Modal.Footer>
           <Button variant="secondary" onClick={() => setShowDeleteConfirmation(false)}>
