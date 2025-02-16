@@ -119,25 +119,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action == 'getAllProjectsTasks') {
         $project_id = intval($_GET['project_id']);
         
-        $query = "SELECT t.task_id, t.project_id, t.user_id, t.status, t.task_name, 
-                         u.name AS user_name, u.job_title 
-                  FROM project_tasks t
-                  LEFT JOIN Users u ON t.user_id = u.user_id
-                  WHERE t.project_id = ?";
-        $stmt = $mysqli->prepare($query);
+        // Fetch all users in the project (from project_users table)
+        $users_query = "SELECT u.user_id, u.name, u.job_title 
+                        FROM project_users pu
+                        JOIN Users u ON pu.user_id = u.user_id
+                        WHERE pu.project_id = ?";
+        $stmt = $mysqli->prepare($users_query);
         $stmt->bind_param("i", $project_id);
         $stmt->execute();
-        $result = $stmt->get_result();
-        $tasks = $result->fetch_all(MYSQLI_ASSOC);
+        $users_result = $stmt->get_result();
+        $users = $users_result->fetch_all(MYSQLI_ASSOC);
+    
+        // Fetch all tasks for the project (from project_tasks table)
+        $tasks_query = "SELECT t.task_id, t.project_id, t.user_id, t.status, t.task_name, 
+                               u.name AS user_name, u.job_title 
+                        FROM project_tasks t
+                        LEFT JOIN Users u ON t.user_id = u.user_id
+                        WHERE t.project_id = ?";
+        $stmt = $mysqli->prepare($tasks_query);
+        $stmt->bind_param("i", $project_id);
+        $stmt->execute();
+        $tasks_result = $stmt->get_result();
+        $tasks = $tasks_result->fetch_all(MYSQLI_ASSOC);
     
         // Group tasks by user
-        $users = [];
+        $users_with_tasks = [];
         foreach ($tasks as $task) {
             $user_id = $task['user_id'];
     
             // If user is not added yet, add them
-            if (!isset($users[$user_id])) {
-                $users[$user_id] = [
+            if (!isset($users_with_tasks[$user_id])) {
+                $users_with_tasks[$user_id] = [
                     "user_id" => $task["user_id"],
                     "name" => $task["user_name"],
                     "job_title" => $task["job_title"],
@@ -146,7 +158,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             }
     
             // Add task to the user's task list
-            $users[$user_id]["tasks"][] = [
+            $users_with_tasks[$user_id]["tasks"][] = [
                 "task_id" => $task["task_id"],
                 "project_id" => $task["project_id"],
                 "status" => $task["status"],
@@ -154,17 +166,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             ];
         }
     
-        echo json_encode(array_values($users)); // Convert associative array to indexed array
+        // Merge users with tasks and users without tasks
+        $all_users = [];
+        foreach ($users as $user) {
+            $user_id = $user['user_id'];
+            if (isset($users_with_tasks[$user_id])) {
+                // User has tasks, include them with their tasks
+                $all_users[] = $users_with_tasks[$user_id];
+            } else {
+                // User has no tasks, include them with an empty task list
+                $all_users[] = [
+                    "user_id" => $user["user_id"],
+                    "name" => $user["name"],
+                    "job_title" => $user["job_title"],
+                    "tasks" => []
+                ];
+            }
+        }
+    
+        echo json_encode($all_users); // Return all users with their tasks (if any)
         exit();
-    }    
+    }
+
+
+    // -----------------------------
+    // Get Individual Tasks for a given user
+    // -----------------------------
+    if ($action == 'getIndividualTasks') {
+        $user_id = intval($_GET['user_id']);
+
+        // Query to fetch all individual tasks for the given user
+        $query = "SELECT * FROM individual_tasks
+                  WHERE user_id = $user_id AND binned = 0
+                  ORDER BY deadline ASC";
+
+        $result = $mysqli->query($query);
+        if (!$result) {
+            error_log("Error fetching individual tasks: " . $mysqli->error);
+            echo json_encode(["error" => "Error fetching individual tasks"]);
+            exit();
+        }
+
+        $individual_tasks = [];
+        while ($row = $result->fetch_assoc()) {
+            $individual_tasks[] = $row;
+        }
+        error_log("Individual tasks fetched for user $user_id: " . json_encode($individual_tasks));
+        echo json_encode($individual_tasks);
+        exit();
+    }
 }
 
 
 
 
-// ---------------------------------
-// Update a task’s status (via POST)
-// ---------------------------------
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $data = json_decode(file_get_contents("php://input"), true);
     if (!$data) {
@@ -173,6 +229,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
+    // ---------------------------------
+    // Update a task’s status 
+    // ---------------------------------
     if ($action == 'updateTask') {
         $task_id = intval($data['task_id']);
         $user_id = intval($data['user_id']);
@@ -229,7 +288,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
 
- // -----------------------------
+    // -----------------------------
     // Add a new task
     // -----------------------------
     if ($action == 'addTask') {
