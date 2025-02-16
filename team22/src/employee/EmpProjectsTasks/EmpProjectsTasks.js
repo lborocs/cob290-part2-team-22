@@ -668,7 +668,7 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
       <h1 className="text-center mb-4">My Projects and Tasks</h1>
 
       <div className="d-flex justify-content-between mb-4">
-        <Button variant="info" onClick={() => setShowProgressModal(true)}>
+        <Button variant="info" onClick={() => setShowProgressModal(true)} style={{backgroundColor:"#0FA3B1"}}>
           <FiPieChart className="me-2" />
           View All Projects Progress
         </Button>
@@ -676,6 +676,7 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
           <Button
             variant={viewOptions.active ? "primary" : "secondary"}
             onClick={() => toggleView("active")}
+            style={{backgroundColor: "#247BA0", border: "1px solid black"}}
           >
             {viewOptions.active ? <FiEye /> : <FiEyeOff />} Active Projects
           </Button>
@@ -699,8 +700,8 @@ const EditProjectTasksModal = ({ show, handleClose, usersTasks, selectedProject,
           })
           .map((project) => (
             <Col xs={12} md={6} lg={4} key={project.project_id} className="mb-4">
-              <Card className="h-100 shadow-sm">
-                <Card.Header className="d-flex justify-content-between align-items-center bg-light">
+              <Card className="h-100 shadow-sm" style={{backgroundColor:"#F4E9CD"}}>
+               <Card.Header className="d-flex justify-content-between align-items-center" style={{backgroundColor:"#247BA0"}}>
                 <Badge bg={getPriorityColor(project.priority)}>
                   {project.priority}
                 </Badge>
