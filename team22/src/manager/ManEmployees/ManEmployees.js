@@ -18,6 +18,9 @@ const ManEmployees = () => {
   const [selectedEmployee, setSelectedEmployee] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterType, setFilterType] = useState('name');
+  const [sortType, setSortType] = useState(null);
+  const [editJobTitle, setEditJobTitle] = useState('');
+  const [editSkills, setEditSkills] = useState('');
 
   // Fetch employees from the backend
   const fetchEmployees = async () => {
@@ -31,24 +34,57 @@ const ManEmployees = () => {
     }
   };
 
+  // Fetch employees on component mount
   useEffect(() => {
     fetchEmployees();
   }, []);
 
-  // Handle filter changes
-  const handleSearchChange = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  // Apply filters to employee list
+  // Filter and sort employees based on search query, filter type, and sort type
   useEffect(() => {
     let filtered = employees.filter(emp => 
       emp[filterType]?.toLowerCase().includes(searchQuery.toLowerCase())
     );
+    if (sortType === 'tasksAssigned') {
+      filtered.sort((a, b) => b.tasksAssigned - a.tasksAssigned);
+    }
     setFilteredEmployees(filtered);
-  }, [searchQuery, filterType, employees]);
+  }, [searchQuery, filterType, employees, sortType]);
 
-  // 🔥 Process Skills Data for Pie Chart
+  // Show modal and set selected employee data
+  const handleShowModal = (emp) => {
+    setSelectedEmployee(emp);
+    setEditJobTitle(emp.job_title);
+    setEditSkills(emp.skills);
+    setShowModal(true);
+  };
+
+  // Save changes to the backend
+  const handleSaveChanges = async () => {
+    if (!selectedEmployee) return;
+    try {
+      const response = await fetch(`${API_URL}?action=updateEmployee`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          user_id: selectedEmployee.user_id,
+          job_title: editJobTitle,
+          skills: editSkills,
+        }),
+      });
+
+      if (response.ok) {
+        // Refresh the employee list after updating
+        fetchEmployees();
+        setShowModal(false);
+      } else {
+        console.error('Failed to update employee');
+      }
+    } catch (err) {
+      console.error('Error updating employee', err);
+    }
+  };
+
+  // Process data for the skills distribution pie chart
   const processSkillsData = () => {
     const skillCounts = {};
     employees.forEach(emp => {
@@ -58,61 +94,51 @@ const ManEmployees = () => {
         });
       }
     });
-
     return {
       labels: Object.keys(skillCounts),
-      datasets: [
-        {
-          data: Object.values(skillCounts),
-          backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50', '#FF5722', '#9C27B0'],
-        }
-      ]
+      datasets: [{
+        data: Object.values(skillCounts),
+        backgroundColor: ['#FF6384', '#36A2EB', '#FFCE56', '#4CAF50', '#FF5722', '#9C27B0'],
+      }]
     };
   };
 
-  // 📊 Process Task Allocation for Bar Chart
+  // Process data for the task allocation bar chart
   const processTaskData = () => {
+    const topEmployees = [...employees]
+      .sort((a, b) => b.tasksAssigned - a.tasksAssigned)
+      .slice(0, 5);
+
     return {
-      labels: employees.map(emp => emp.name),
-      datasets: [
-        {
-          label: "Tasks Assigned",
-          data: employees.map(emp => emp.tasksAssigned),
-          backgroundColor: employees.map(emp => emp.tasksAssigned > 5 ? '#FF5733' : '#36A2EB'), 
-        }
-      ]
+      labels: topEmployees.map(emp => emp.name),
+      datasets: [{
+        label: "Tasks Assigned",
+        data: topEmployees.map(emp => emp.tasksAssigned),
+        backgroundColor: topEmployees.map(emp => emp.tasksAssigned > 7 ? '#FF5733' : '#36A2EB'),
+      }]
     };
-  };
-
-  // 📌 Identify Skill Gaps for Training Needs
-  const requiredSkills = ["Python", "SQL", "Project Management", "Data Analysis"];
-  const identifySkillGaps = () => {
-    const employeeSkills = new Set();
-    employees.forEach(emp => {
-      if (emp.skills) {
-        emp.skills.split(', ').forEach(skill => employeeSkills.add(skill));
-      }
-    });
-
-    return requiredSkills.filter(skill => !employeeSkills.has(skill));
   };
 
   return (
     <Container>
       <h1 className="text-center my-4">Manager's Employee Overview</h1>
 
-      {/* Search and Filter */}
+      {/* Search, Filter, and Sort Bar */}
       <InputGroup className="mb-3">
-        <Form.Control 
-          type="text" 
-          placeholder={`Search by ${filterType}`} 
-          value={searchQuery} 
-          onChange={handleSearchChange} 
+        <Form.Control
+          type="text"
+          placeholder={`Search by ${filterType}`}
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
         />
         <DropdownButton as={InputGroup.Append} variant="outline-secondary" title={`Filter by ${filterType}`}>
           <Dropdown.Item onClick={() => setFilterType('name')}>Name</Dropdown.Item>
           <Dropdown.Item onClick={() => setFilterType('job_title')}>Job Title</Dropdown.Item>
           <Dropdown.Item onClick={() => setFilterType('skills')}>Skills</Dropdown.Item>
+        </DropdownButton>
+        <DropdownButton as={InputGroup.Append} variant="outline-secondary" title="Sort By">
+          <Dropdown.Item onClick={() => setSortType(null)}>Default</Dropdown.Item>
+          <Dropdown.Item onClick={() => setSortType('tasksAssigned')}>Most Tasks Assigned</Dropdown.Item>
         </DropdownButton>
       </InputGroup>
 
@@ -132,18 +158,21 @@ const ManEmployees = () => {
         </thead>
         <tbody>
           {filteredEmployees.map(emp => (
-            <tr key={emp.user_id} style={{ backgroundColor: emp.tasksAssigned > 5 ? '#ffebeb' : 'inherit' }}>
+            <tr key={emp.user_id} style={{ backgroundColor: emp.tasksAssigned > 7 ? '#ffebeb' : 'inherit' }}>
               <td>{emp.user_id}</td>
               <td>{emp.name}</td>
               <td>{emp.job_title}</td>
               <td>{emp.skills}</td>
-              <td>{emp.tasksAssigned}</td>
+              <td>{emp.tasksAssigned} {emp.tasksAssigned > 7 && <FaExclamationTriangle style={{ color: 'red' }} />}</td>
               <td>{emp.tasksCompleted}</td>
               <td>{emp.projectsAssigned}</td>
-              <td style={{ textAlign: 'center' }}>
-                <Button variant={emp.tasksAssigned > 5 ? "danger" : "info"} size="sm" 
-                  onClick={() => { setSelectedEmployee(emp); setShowModal(true); }}>
-                  {emp.tasksAssigned > 5 && <FaExclamationTriangle style={{ marginRight: '5px' }} />}
+              <td>
+                <Button
+                  variant={emp.tasksAssigned > 7 ? "danger" : "info"}
+                  size="sm"
+                  onClick={() => handleShowModal(emp)}
+                >
+                  {emp.tasksAssigned > 7 && <FaExclamationTriangle style={{ marginRight: '5px' }} />}
                   <FiEye /> View
                 </Button>
               </td>
@@ -151,36 +180,8 @@ const ManEmployees = () => {
           ))}
         </tbody>
       </Table>
-      
-      {/* Employee Details Modal */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
-        <Modal.Header closeButton>
-          <Modal.Title>Employee Details</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          {selectedEmployee ? (
-            <div>
-              <p><strong>Name:</strong> {selectedEmployee.name}</p>
-              <p><strong>Job Title:</strong> {selectedEmployee.job_title}</p>
-              <p><strong>Skills:</strong> {selectedEmployee.skills}</p>
-              <p><strong>Tasks Assigned:</strong> {selectedEmployee.tasksAssigned}</p>
-              <p><strong>Tasks Completed:</strong> {selectedEmployee.tasksCompleted}</p>
-              <p><strong>Projects Assigned:</strong> {selectedEmployee.projectsAssigned}</p>
 
-              {/* Warning Message for Overloaded Employees */}
-              {selectedEmployee.tasksAssigned > 5 && (
-                <p style={{ color: 'red', fontWeight: 'bold' }}>
-                  ⚠️ Advised: Do not assign more tasks to this employee.
-                </p>
-              )}
-            </div>
-          ) : (
-            <p>Loading employee details...</p>
-          )}
-        </Modal.Body>
-      </Modal>
-
-      {/* Charts Side-by-Side */}
+      {/* Charts Section */}
       <h2 className="text-center my-4">Employee Insights</h2>
       <Row className="justify-content-center">
         <Col md={5}>
@@ -188,10 +189,45 @@ const ManEmployees = () => {
           <Pie data={processSkillsData()} />
         </Col>
         <Col md={5}>
-          <h4 className="text-center">Task Allocation</h4>
+          <h4 className="text-center">Task Allocation (Top 5)</h4>
           <Bar data={processTaskData()} />
         </Col>
       </Row>
+
+      {/* Edit Employee Modal */}
+      <Modal show={showModal} onHide={() => setShowModal(false)}>
+        <Modal.Header closeButton>
+          <Modal.Title>Edit Employee Details</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {selectedEmployee && (
+            <>
+              <Form>
+                <Form.Group>
+                  <Form.Label>Job Title</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={editJobTitle}
+                    onChange={(e) => setEditJobTitle(e.target.value)}
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label>Skills (comma separated)</Form.Label>
+                  <Form.Control
+                    type="text"
+                    value={editSkills}
+                    onChange={(e) => setEditSkills(e.target.value)}
+                  />
+                </Form.Group>
+              </Form>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>Close</Button>
+          <Button variant="primary" onClick={handleSaveChanges}>Save Changes</Button>
+        </Modal.Footer>
+      </Modal>
     </Container>
   );
 };
