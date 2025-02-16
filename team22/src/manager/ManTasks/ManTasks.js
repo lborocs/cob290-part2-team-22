@@ -58,11 +58,9 @@ const ManTasks = () => {
   const [showEmployeeOptions, setShowEmployeeOptions] = useState(false)
   const employeeFilterRef = useRef(null)
 
-  // Priority filter state
-  const [priorityFilterText, setPriorityFilterText] = useState("")
+  // Priority filter state (updated: static buttons with removable tags)
+  // (Note: Removed the search input and related states.)
   const [selectedPriorities, setSelectedPriorities] = useState([])
-  const [showPriorityOptions, setShowPriorityOptions] = useState(false)
-  const priorityFilterRef = useRef(null)
 
   // Deadline filter state
   const [deadlineFilterStart, setDeadlineFilterStart] = useState("")
@@ -130,7 +128,7 @@ const ManTasks = () => {
         selectedEmployees.includes(Number.parseInt(task.user_id)),
       )
     }
-    // Apply priority filter if any selected
+    // Apply priority filter if any selected (updated section)
     if (selectedPriorities.length > 0) {
       filteredTasks = filteredTasks.filter((task) =>
         selectedPriorities.includes(task.priority),
@@ -189,7 +187,7 @@ const ManTasks = () => {
     setSelectedEmployees((prev) => prev.filter((id) => id !== empId))
   }
 
-  // Priority Filter functions
+  // Priority Filter functions (updated: static buttons)
   const addPriority = (priority) => {
     if (!selectedPriorities.includes(priority)) {
       setSelectedPriorities((prev) => [...prev, priority])
@@ -405,56 +403,29 @@ const ManTasks = () => {
           </Form.Group>
         </Col>
         <Col md={4}>
-          <Form.Group controlId="priorityFilter">
+          <Form.Group controlId="priorityFilter" className="mb-3">
             <Form.Label>Filter by Priority</Form.Label>
-            <div
-              tabIndex="0"
-              onFocus={() => setShowPriorityOptions(true)}
-              onBlur={() => setTimeout(() => setShowPriorityOptions(false), 150)}
-            >
-              <Form.Control
-                type="text"
-                placeholder="Search priorities..."
-                value={priorityFilterText}
-                onChange={(e) => setPriorityFilterText(e.target.value)}
-                className="mb-2"
-              />
-              {showPriorityOptions && (
-                <div className="list-group">
-                  {priorityOptions
-                    .filter((option) => {
-                      const matchesSearch = option
-                        .toLowerCase()
-                        .includes(priorityFilterText.toLowerCase())
-                      const isSelected = selectedPriorities.includes(option)
-                      return matchesSearch || isSelected
-                    })
-                    .map((option) => (
-                      <Button
-                        key={option}
-                        variant="outline-secondary"
-                        className="list-group-item list-group-item-action"
-                        onClick={() => addPriority(option)}
-                      >
-                        {option}
-                      </Button>
-                    ))}
-                </div>
-              )}
+            <div className="mt-2">
+              {priorityOptions.map((option) => (
+                <Button
+                  variant="outline-secondary"
+                  size="sm"
+                  className="me-2 mb-2"
+                  key={option}
+                  onClick={() => addPriority(option)}
+                >
+                  {option}
+                </Button>
+              ))}
             </div>
             <div className="mt-2">
               {selectedPriorities.map((option) => (
-                <Badge key={option} bg="primary" pill className="me-1">
+                <Badge pill bg="primary" className="me-1" key={option}>
                   {option}{" "}
                   <Button
                     variant="link"
+                    style={{ color: "white", padding: 0, fontSize: "0.8em" }}
                     onClick={() => removePriority(option)}
-                    style={{
-                      color: "white",
-                      textDecoration: "none",
-                      padding: 0,
-                      fontSize: "0.8em",
-                    }}
                   >
                     &times;
                   </Button>
@@ -610,7 +581,7 @@ const ManTasks = () => {
                                   updateTaskField(task.individual_task_id, { binned: 0 })
                                   closeConfirmModal()
                                 },
-                                "success" // Green button for restore
+                                "success"
                               )
                             }
                           >
@@ -635,11 +606,7 @@ const ManTasks = () => {
                           </Button>
                         </>
                       ) : (
-                        <Button
-                          variant="outline-danger"
-                          size="sm"
-                          onClick={() => handleBinChange(task)}
-                        >
+                        <Button variant="outline-danger" size="sm" onClick={() => handleBinChange(task)}>
                           <FiTrash2 />
                         </Button>
                       )}
