@@ -10,16 +10,16 @@ function ManagerDashboard() {
   const [userStats, setUserStats] = useState({ total_employees: 0, total_managers: 0, total_team_leaders: 0 });
   const [projects, setProjects] = useState();
   const [selectedProject, setSelectedProject] = useState("");
-  const userStatsBreakdown = [{ label: "Managers", count: userStats.total_managers, color: "#832232" },
-  { label: "Team Leaders", count: userStats.total_team_leaders, color: "#8C86AA" },
-  { label: "Employees", count: userStats.total_employees, color: "#FF6978" },];
+  const userStatsBreakdown = [{ label: "Managers", count: userStats.total_managers, color: "bg-danger" },
+  { label: "Team Leaders", count: userStats.total_team_leaders, color: "bg-warning" },
+  { label: "Employees", count: userStats.total_employees, color: "bg-success" },];
   const [chartData, setChartData] = useState({
     labels: ["Upcoming Deadline", "On track", "Overdue"],
     datasets: [
       {
         data: [0, 0, 0],
-        backgroundColor: ["#ff9e17", "#14e809", "#eb2610"],
-        hoverBackgroundColor: ["#bf6708", "#11c408", "#c2200e"],
+        backgroundColor: ["#ffc107", "#198754", "#dc3545"],
+        hoverBackgroundColor: ["#ffca2c", "#157347", "#bb2d3b"],
       },
     ],
   });
@@ -28,8 +28,8 @@ function ManagerDashboard() {
     datasets: [
       {
         data: [],
-        backgroundColor: "#3C1518",
-        borderColor: "#0d0d0d",
+        backgroundColor: "bg-secondary",
+        borderColor: "bg-secondary",
       }]
   });
   
@@ -198,8 +198,8 @@ function ManagerDashboard() {
         datasets: [
           {
             data: data.map(item => item.task_count),
-            backgroundColor: "#3C1518",
-            borderColor: "#0d0d0d",
+            backgroundColor: "bg-secondary",
+            borderColor: "bg-secondary",
           }]
         }
     );
@@ -248,14 +248,14 @@ function ManagerDashboard() {
       <div className="row mt-4">
         <div className="col-4 mb-4">
           <div className="card h-100">
-            <div className="card-header text-white" style={{backgroundColor: "#031926"}}>
+            <div className="card-header text-white bg-dark">
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="bi bi-list-task me-2"></i> Task Information
                 </h5>
                 <div className="dropdown">
-                  <select value={selectedProject} onChange={onProjectChange} style={{width: "75", height: "90%", paddingleft: "12px", 
-                    border: "2px solid black",  borderRadius: "5px", backgroundColor: "#468189", color: "white", fontSize: "16px", cursor: "pointer",
+                  <select value={selectedProject} onChange={onProjectChange} className="form-select form-select-sm bg-primary text-white" style={{width: "75", height: "90%", paddingleft: "12px", 
+                    border: "2px solid black",  borderRadius: "5px", fontSize: "16px", cursor: "pointer",
                     transition: "background-color 0.3s ease, border-color 0.3s ease"}}>
                   <option value="">Select a Project</option>
                   {projects.map((proj) => (          
@@ -266,18 +266,18 @@ function ManagerDashboard() {
                 </div>
               </div>
             </div>
-            <div className="card-body" style={{backgroundColor: "#F4E9CD"}}>
+            <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Total Projects Tasks</span>
-                <span className="badge" style={{backgroundColor: "#77ACA2"}}>{taskStats.total_tasks}</span>
+                <span className="badge bg-primary">{taskStats.total_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Completed Projects Tasks</span>
-                <span className="badge" style={{backgroundColor: "#9DBEBB"}}>{taskStats.completed_tasks}</span>
+                <span className="badge bg-success">{taskStats.completed_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Uncompleted Project Tasks</span>
-                <span className="badge" style={{backgroundColor: "#468189"}}>{taskStats.uncompleted_tasks}</span>
+                <span className="badge bg-danger">{taskStats.uncompleted_tasks}</span>
               </div>
             </div>
           </div>
@@ -285,27 +285,27 @@ function ManagerDashboard() {
 
         <div className="col-4 mb-4">
           <div className="card h-100">
-            <div className="card-header text-white" style={{backgroundColor: "#247BA0"}}>
+            <div className="card-header bg-info text-white">
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Project Information
               </h5>
             </div>
-            <div className="card-body" style={{backgroundColor: "#F4E9CD"}}>
+            <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Active Projects</span>
-                <span className="badge" style={{backgroundColor: "#242331"}}>{projectStats.active_projects}</span>
+                <span className="badge bg-secondary">{projectStats.active_projects}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Overdue Projects</span>
-                <span className="badge" style={{backgroundColor: "#A27035"}}>{projectStats.overdue_projects}</span>
+                <span className="badge bg-warning">{projectStats.overdue_projects}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Overall Project Progress</span>
-                <span className="badge" style={{backgroundColor: "#087E8B"}}>{projectStats.average_progress}%</span>
+                <span className="badge bg-primary">{projectStats.average_progress}%</span>
               </div>
               <div className="progress">
                 <div
-                  className="progress-bar" role="progressbar" style={{ backgroundColor: "#087E8B", width: `${projectStats.average_progress}%` }}
+                  className="progress-bar bg-success" role="progressbar" style={{ width: `${projectStats.average_progress}%` }}
                   aria-valuenow={projectStats.average_progress} aria-valuemin="0" aria-valuemax="100"
                 >
                   {projectStats.average_progress}%
@@ -318,23 +318,23 @@ function ManagerDashboard() {
         
         <div className="col-4 mb-4">
           <div className="card h-100">
-            <div className="card-header text-white" style={{ backgroundColor: '#0F5257' }}>
+            <div className="card-header bg-primary text-white">
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Total Task Priority Information
               </h5>
             </div>
-            <div className="card-body" style={{ backgroundColor: '#F4E9CD'}}>
+            <div className="card-body">
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>High-Priority Tasks</span>
-                <span className="badge" style={{backgroundColor: "#0B3142"}}>{taskStats.high_prio_tasks}</span>
+                <span className="badge bg-danger">{taskStats.high_prio_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Medium-Priority Taks</span>
-                <span className="badge" style={{ backgroundColor: '#9C92A3' }}>{taskStats.med_prio_tasks}</span>
+                <span className="badge bg-warning">{taskStats.med_prio_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
                 <span>Low Priority Tasks</span>
-                <span className="badge" style={{ backgroundColor: '#8C86AA' }}>{taskStats.low_prio_tasks}</span>
+                <span className="badge bg-success">{taskStats.low_prio_tasks}</span>
               </div>
             </div>
           </div>
@@ -342,27 +342,27 @@ function ManagerDashboard() {
 
     <div className="col-4 mb-4">
       <div className="card h-100">
-        <div className="card-header text-white" style={{backgroundColor: "#802392"}}>
+        <div className="card-header bg-secondary text-white">
           <h5 className="card-title mb-0">
             <i className="bi bi-person"></i> Overall User Info
           </h5>
         </div>
-        <div className="card-body" style={{ backgroundColor: '#F4E9CD' }}>
+        <div className="card-body">
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span>Total Users</span>
-            <span className="badge" style={{ backgroundColor: '#370031' }}>{userStats.total_users}</span>
+            <span className="badge bg-primary">{userStats.total_users}</span>
           </div>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span>Total Managers</span>
-            <span className="badge" style={{ backgroundColor: '#832232' }}>{userStats.total_managers}</span>
+            <span className="badge bg-primary">{userStats.total_managers}</span>
           </div>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span>Total Team Leaders</span>
-            <span className="badge" style={{ backgroundColor: '#8C86AA' }}>{userStats.total_team_leaders}</span>
+            <span className="badge bg-primary">{userStats.total_team_leaders}</span>
           </div>
           <div className="d-flex justify-content-between align-items-center mb-3">
             <span>Total Employees</span>
-            <span className="badge" style={{ backgroundColor: '#FF6978' }}>{userStats.total_employees}</span>
+            <span className="badge bg-primary">{userStats.total_employees}</span>
           </div>
           <div className="progress" style={{ height: "20px" }}>
           {userStatsBreakdown.map((stat) => {
@@ -370,12 +370,10 @@ function ManagerDashboard() {
             return (
               <div
                 key={stat.label}
-                className="progress-bar"
+                ckey={stat.label}
+                className={`progress-bar ${stat.color}`}
                 role="progressbar"
-                style={{
-                  backgroundColor: stat.color,
-                  width: `${percentage}%`,
-                }}
+                style={{ width: `${percentage}%` }}
                 aria-valuenow={percentage}
                 aria-valuemin="0"
                 aria-valuemax="100"
@@ -392,12 +390,12 @@ function ManagerDashboard() {
 
     <div className="col-4 mb-4">
       <div className="card h-100">
-        <div className="card-header text-dark" style={{ backgroundColor: "#8DA1B9" }}>
-          <h5 className="card-title mb-0">
+        <div className="card-header bg-primary">
+          <h5 className="card-title mb-0 text-white">
             <i className="bi bi-person"></i> Active Project Status
           </h5>
         </div>
-        <div className="card-body d-flex justify-content-center" style={{ height: "100px", backgroundColor: "#F4E9CD" }}>
+        <div className="card-body d-flex justify-content-center">
           <Pie data={chartData} width={50} height={50} options={pieOptions}/>
         </div>
       </div>
@@ -405,12 +403,12 @@ function ManagerDashboard() {
 
     <div className="col-4 mb-4">
       <div className="card h-100">
-        <div className="card-header text-dark" style={{ backgroundColor: "#9D8189" }}>
-          <h5 className="card-title mb-0">
+        <div className="card-header bg-primary">
+          <h5 className="card-title mb-0 text-white">
             <i className="bi bi-person"></i> Top 5 highest task count
           </h5>
         </div>
-        <div className="card-body d-flex justify-content-center" style={{ backgroundColor: "#F4E9CD" }}>
+        <div className="card-body d-flex justify-content-center">
           <Bar data={barChartData} options={options}/>
         </div>
       </div>
