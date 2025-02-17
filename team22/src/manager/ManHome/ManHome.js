@@ -5,14 +5,16 @@ import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 ChartJS.register(ArcElement, Tooltip, Legend);
 
 function ManagerDashboard() {
-  const [taskStats, setTaskStats] = useState({total_tasks: 0, completed_tasks: 0, uncompleted_tasks : 0, high_prio_tasks: 0, med_prio_tasks: 0, low_prio_tasks: 0 });
+  const [taskStats, setTaskStats] = useState({ total_tasks: 0, completed_tasks: 0, uncompleted_tasks: 0, high_prio_tasks: 0, med_prio_tasks: 0, low_prio_tasks: 0 });
   const [projectStats, setProjectStats] = useState({ active_projects: 0, overdue_projects: 0, average_progress: 0 });
-  const [userStats, setUserStats] = useState({ total_employees: 0, total_managers: 0, total_team_leaders: 0 });
-  const [projects, setProjects] = useState();
+  const [userStats, setUserStats] = useState({ total_users: 0, total_managers: 0, total_team_leaders: 0, total_employees: 0 });
+  const [projects, setProjects] = useState([]);
   const [selectedProject, setSelectedProject] = useState("");
-  const userStatsBreakdown = [{ label: "Managers", count: userStats.total_managers, color: "bg-danger" },
-  { label: "Team Leaders", count: userStats.total_team_leaders, color: "bg-warning" },
-  { label: "Employees", count: userStats.total_employees, color: "bg-success" },];
+  const userStatsBreakdown = [
+    { label: "Managers", count: userStats.total_managers, color: "bg-danger" },
+    { label: "Team Leaders", count: userStats.total_team_leaders, color: "bg-warning" },
+    { label: "Employees", count: userStats.total_employees, color: "bg-success" },
+  ];
   const [chartData, setChartData] = useState({
     labels: ["Upcoming Deadline", "On track", "Overdue"],
     datasets: [
@@ -28,17 +30,18 @@ function ManagerDashboard() {
     datasets: [
       {
         data: [],
-        backgroundColor: "bg-secondary",
-        borderColor: "bg-secondary",
-      }]
+        backgroundColor: "#6c757d",
+        borderColor: "#6c757d",
+      }
+    ]
   });
-  
+
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-          display: false
+        display: false
       }
     }
   };
@@ -48,31 +51,27 @@ function ManagerDashboard() {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-          display: true, 
-          position: "left"
+        display: true,
+        position: "left"
       }
     }
   };
 
-  async function onProjectChange(e){
-        let selection = e.target.value;
-        try{
-          if (selection && !isNaN(selection)) {   
-            let selProjectID = parseInt(selection, 10);
-            await fetchProjectTasks(selProjectID);
-        }
-        else{
-          await fetchTaskStats();
-        }
-        } 
-        catch (error) {
-          console.error('Error fetching data:', error);
-          setError('Failed to fetch data. Please try again later.');
-        }
-        setSelectedProject(selection);     
-        };
-        
-
+  async function onProjectChange(e) {
+    let selection = e.target.value;
+    try {
+      if (selection && !isNaN(selection)) {
+        let selProjectID = parseInt(selection, 10);
+        await fetchProjectTasks(selProjectID);
+      } else {
+        await fetchTaskStats();
+      }
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      setError('Failed to fetch data. Please try again later.');
+    }
+    setSelectedProject(selection);
+  }
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -147,7 +146,7 @@ function ManagerDashboard() {
 
   const fetchProjectTasks = async (id) => {
     try {
-      const response = await fetch(`http://35.214.101.36/ManHome.php?process=getTaskStatsByProject&project_id=`+ id);
+      const response = await fetch(`http://35.214.101.36/ManHome.php?process=getTaskStatsByProject&project_id=` + id);
       if (!response.ok) {
         throw new Error('Failed to fetch project tasks');
       }
@@ -164,13 +163,13 @@ function ManagerDashboard() {
 
   const populateProjectPie = async () => {
     try {
-      const response = await fetch("http://35.214.101.36/ManHome.php?process=getProjectStats"); 
+      const response = await fetch("http://35.214.101.36/ManHome.php?process=getProjectStats");
       if (!response.ok) {
         throw new Error('Failed to fetch project status');
       }
       const data = await response.json();
       const { close_deadline_projects, ontrack_projects, overdue_projects } = data.projectStats;
-  
+
       setChartData({
         labels: ["Upcoming Deadline", "On track", "Overdue"],
         datasets: [
@@ -185,31 +184,30 @@ function ManagerDashboard() {
       console.error("Error fetching project status data:", error);
     }
   };
+
   const populateUserTaskBar = async () => {
     try {
-      const response = await fetch("http://35.214.101.36/ManHome.php?process=getUserTasks"); 
+      const response = await fetch("http://35.214.101.36/ManHome.php?process=getUserTasks");
       if (!response.ok) {
         throw new Error('Failed to fetch user tasks');
       }
       const data = await response.json();
-  
+
       setBarChartData({
         labels: data.map(item => item.user_names),
         datasets: [
           {
             data: data.map(item => item.task_count),
-            backgroundColor: "bg-secondary",
-            borderColor: "bg-secondary",
-          }]
-        }
-    );
+            backgroundColor: "#6c757d",
+            borderColor: "#6c757d",
+          }
+        ]
+      });
 
     } catch (error) {
       console.error("Error fetching project status data:", error);
     }
   };
-  
-  
 
   useEffect(() => {
     const fetchData = async () => {
@@ -217,7 +215,6 @@ function ManagerDashboard() {
       try {
         await Promise.all([fetchTaskStats(), fetchProjectStats(), fetchUserStats(), fetchProjects(), populateProjectPie(), populateUserTaskBar()]);
       } catch (error) {
-        console.log(chartData);
         console.error('Error fetching data:', error);
         setError('Failed to fetch data. Please try again later.');
       } finally {
@@ -241,28 +238,27 @@ function ManagerDashboard() {
       </div>
     );
   }
-  console.log(chartData);
+
   return (
     <div className="container mt-4">
-      <h1 className="text-center mb-4">Manager Dashboard</h1>
+      <h1 className="text-center mb-4" style={{ color: "#2c3e50" }}>Manager Dashboard</h1>
       <div className="row mt-4">
         <div className="col-4 mb-4">
-          <div className="card h-100">
-            <div className="card-header text-white bg-dark">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#3498db" }}>
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="bi bi-list-task me-2"></i> Task Information
                 </h5>
                 <div className="dropdown">
-                  <select value={selectedProject} onChange={onProjectChange} className="form-select form-select-sm bg-primary text-white" style={{width: "75", height: "90%", paddingleft: "12px", 
-                    border: "2px solid black",  borderRadius: "5px", fontSize: "16px", cursor: "pointer",
-                    transition: "background-color 0.3s ease, border-color 0.3s ease"}}>
-                  <option value="">Select a Project</option>
-                  {projects.map((proj) => (          
-                    <option key={proj.project_id} value={proj.project_id}>            
-                    {proj.name}          
-                    </option> ))} 
-                </select>
+                  <select value={selectedProject} onChange={onProjectChange} className="form-select form-select-sm bg-light text-dark" style={{ width: "75%", border: "1px solid #ced4da", borderRadius: "5px", fontSize: "14px", cursor: "pointer" }}>
+                    <option value="">Select a Project</option>
+                    {projects.map((proj) => (
+                      <option key={proj.project_id} value={proj.project_id}>
+                        {proj.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
               </div>
             </div>
@@ -284,8 +280,8 @@ function ManagerDashboard() {
         </div>
 
         <div className="col-4 mb-4">
-          <div className="card h-100">
-            <div className="card-header bg-info text-white">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#2ecc71" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Project Information
               </h5>
@@ -315,10 +311,9 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        
         <div className="col-4 mb-4">
-          <div className="card h-100">
-            <div className="card-header bg-primary text-white">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#e74c3c" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Total Task Priority Information
               </h5>
@@ -329,7 +324,7 @@ function ManagerDashboard() {
                 <span className="badge bg-danger">{taskStats.high_prio_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
-                <span>Medium-Priority Taks</span>
+                <span>Medium-Priority Tasks</span>
                 <span className="badge bg-warning">{taskStats.med_prio_tasks}</span>
               </div>
               <div className="d-flex justify-content-between align-items-center mb-3">
@@ -340,83 +335,81 @@ function ManagerDashboard() {
           </div>
         </div>
 
-    <div className="col-4 mb-4">
-      <div className="card h-100">
-        <div className="card-header bg-secondary text-white">
-          <h5 className="card-title mb-0">
-            <i className="bi bi-person"></i> Overall User Info
-          </h5>
-        </div>
-        <div className="card-body">
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span>Total Users</span>
-            <span className="badge bg-primary">{userStats.total_users}</span>
-          </div>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span>Total Managers</span>
-            <span className="badge bg-primary">{userStats.total_managers}</span>
-          </div>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span>Total Team Leaders</span>
-            <span className="badge bg-primary">{userStats.total_team_leaders}</span>
-          </div>
-          <div className="d-flex justify-content-between align-items-center mb-3">
-            <span>Total Employees</span>
-            <span className="badge bg-primary">{userStats.total_employees}</span>
-          </div>
-          <div className="progress" style={{ height: "20px" }}>
-          {userStatsBreakdown.map((stat) => {
-            const percentage = (stat.count / userStats.total_users) * 100;
-            return (
-              <div
-                key={stat.label}
-                ckey={stat.label}
-                className={`progress-bar ${stat.color}`}
-                role="progressbar"
-                style={{ width: `${percentage}%` }}
-                aria-valuenow={percentage}
-                aria-valuemin="0"
-                aria-valuemax="100"
-                title={`${stat.label}: ${percentage.toFixed(1)}%`}
-              >
-                {percentage > 10 && `${percentage.toFixed(1)}%`}
+        <div className="col-4 mb-4">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#9b59b6" }}>
+              <h5 className="card-title mb-0">
+                <i className="bi bi-person"></i> Overall User Info
+              </h5>
+            </div>
+            <div className="card-body">
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span>Total Users</span>
+                <span className="badge bg-primary">{userStats.total_users}</span>
               </div>
-            );
-          })}
-      </div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span>Total Managers</span>
+                <span className="badge bg-primary">{userStats.total_managers}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span>Total Team Leaders</span>
+                <span className="badge bg-primary">{userStats.total_team_leaders}</span>
+              </div>
+              <div className="d-flex justify-content-between align-items-center mb-3">
+                <span>Total Employees</span>
+                <span className="badge bg-primary">{userStats.total_employees}</span>
+              </div>
+              <div className="progress" style={{ height: "20px" }}>
+                {userStatsBreakdown.map((stat) => {
+                  const percentage = (stat.count / userStats.total_users) * 100;
+                  return (
+                    <div
+                      key={stat.label}
+                      className={`progress-bar ${stat.color}`}
+                      role="progressbar"
+                      style={{ width: `${percentage}%` }}
+                      aria-valuenow={percentage}
+                      aria-valuemin="0"
+                      aria-valuemax="100"
+                      title={`${stat.label}: ${percentage.toFixed(1)}%`}
+                    >
+                      {percentage > 10 && `${percentage.toFixed(1)}%`}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
-    </div>
 
-    <div className="col-4 mb-4">
-      <div className="card h-100">
-        <div className="card-header bg-primary">
-          <h5 className="card-title mb-0 text-white">
-            <i className="bi bi-person"></i> Active Project Status
-          </h5>
+        <div className="col-4 mb-4">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#34495e" }}>
+              <h5 className="card-title mb-0">
+                <i className="bi bi-person"></i> Active Project Status
+              </h5>
+            </div>
+            <div className="card-body d-flex justify-content-center">
+              <Pie data={chartData} width={50} height={50} options={pieOptions} />
+            </div>
+          </div>
         </div>
-        <div className="card-body d-flex justify-content-center">
-          <Pie data={chartData} width={50} height={50} options={pieOptions}/>
-        </div>
-      </div>
-    </div>
 
-    <div className="col-4 mb-4">
-      <div className="card h-100">
-        <div className="card-header bg-primary">
-          <h5 className="card-title mb-0 text-white">
-            <i className="bi bi-person"></i> Top 5 highest task count
-          </h5>
-        </div>
-        <div className="card-body d-flex justify-content-center">
-          <Bar data={barChartData} options={options}/>
+        <div className="col-4 mb-4">
+          <div className="card h-100 shadow-sm">
+            <div className="card-header text-white" style={{ backgroundColor: "#16a085" }}>
+              <h5 className="card-title mb-0">
+                <i className="bi bi-person"></i> Top 5 Highest Task Count
+              </h5>
+            </div>
+            <div className="card-body d-flex justify-content-center">
+              <Bar data={barChartData} options={options} />
+            </div>
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</div>
   );
 }
-
 
 export default ManagerDashboard;
