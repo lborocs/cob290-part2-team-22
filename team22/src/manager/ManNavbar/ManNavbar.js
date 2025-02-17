@@ -227,7 +227,7 @@ const closeDropdown = () => {
       </Navbar>
 
       {/* Profile Modal */}
-      <Modal show={showProfileModal} onHide={handleProfileModalHide}>
+      <Modal show={showProfileModal} onHide={handleProfileModalHide} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>Profile</Modal.Title>
         </Modal.Header>
@@ -320,74 +320,78 @@ const closeDropdown = () => {
 
       <style>
       {`
-          .company-logo {
-            height: 45px;
-            padding-right: 30px;
-          }
-          .custom-navbar {
-              background-color:rgb(232, 232, 236) !important;
-              border-bottom: 2px solid #f8b400;
-            }
-          .navbar-nav .nav-link {
-            color: black !important;
-            font-size: 18px;
-            padding: 13px 25px;
-            margin-right: 20px;
-            transition: color 0.3s ease-in-out;
-          }
+        .company-logo {
+          height: 45px;
+          padding-right: 30px;
+        }
+        .custom-navbar {
+          background-color: rgb(232, 232, 236) !important;
+          border-bottom: 2px solid #f8b400;
+        }
+        .navbar-nav .nav-link {
+          color: black !important;
+          font-size: 18px;
+          padding: 13px 25px;
+          margin-right: 20px;
+          transition: color 0.3s ease-in-out;
+        }
 
-          .navbar-nav .nav-link:hover {
-            color: #f8b400 !important;
-          }
-          
-           /* Change the hamburger icon to black */
-          .navbar-toggler-icon {
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='black' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
-          }
+        .navbar-nav .nav-link:hover {
+          color: #f8b400 !important;
+        }
 
-          .navbar-toggler:hover {
-            outline: 2px solid #f8b400;
-          }
-            
-          .navbar-toggler:focus {
-            outline: none;
-            box-shadow: none; 
+        /* Change the hamburger icon to black */
+        .navbar-toggler-icon {
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath stroke='black' stroke-width='2' stroke-linecap='round' stroke-miterlimit='10' d='M4 7h22M4 15h22M4 23h22'/%3E%3C/svg%3E");
+        }
+
+        .navbar-toggler:hover {
+          outline: 2px solid #f8b400;
+        }
+
+        .navbar-toggler:focus {
+          outline: none;
+          box-shadow: none;
+        }
+
+        /* Dropdown menu styling */
+        .profile-dropdown .dropdown-menu {
+          border: 2px solid #f8b400 !important; /* Ensure the border is applied */
+          min-width: 180px;
+          background-color: rgb(232, 232, 236) !important; /* Match the navbar's background color */
+          box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Optional: Add a shadow for better visibility */
+        }
+
+        /* Dropdown items styling */
+        .profile-dropdown .dropdown-item {
+          color: black;
+          font-size: 16px;
+          padding: 10px 15px;
+          transition: color 0.3s ease-in-out;
+          background-color: transparent; /* Ensure no background color */
+        }
+
+        .profile-dropdown .dropdown-item:hover {
+          color: #f8b400 !important; /* Only change the text color to orange on hover */
+          background-color: transparent !important; /* Ensure no background color on hover */
+        }
+
+        /* Ensure dropdown menu is visible and properly styled on mobile */
+        @media (max-width: 992px) {
+          .profile-dropdown {
+            width: 100%;
+            text-align: left;
           }
 
           .profile-dropdown .dropdown-menu {
-            border: none;
-            min-width: 180px;
+            width: 100%;
+            text-align: center;
+            border: 2px solid #f8b400 !important; /* Ensure border is applied on mobile */
+            background-color: rgb(232, 232, 236) !important; /* Match the navbar's background color on mobile */
           }
-
-          .form-label{
-          padding-top: 0.5rem;}
-          
-          .profile-dropdown .dropdown-item {
-            color: black;
-            font-size: 16px;
-            padding: 10px 15px;
-            transition: color 0.3s ease-in-out, border-color 0.3s ease-in-out;
-            border: 2px solid transparent;
-            background-color: transparent;
-          }
-
-          .profile-dropdown .dropdown-item:hover {
-            color: #f8b400; 
-            background-color: transparent; 
-          }
-
-          @media (max-width: 992px) {
-            .profile-dropdown {
-              width: 100%;
-              text-align: left; 
-            }
-
-            .profile-dropdown .dropdown-menu {
-              width: 100%;
-              text-align: center;
-            }
-        `}
-      </style>
+        }
+      `}
+    </style>
     </div>
   );
 };
