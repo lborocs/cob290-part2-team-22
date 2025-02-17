@@ -419,7 +419,7 @@ function TodoList({ userId }) {
         {/* Todo List Section */}
         <Col md={8}>
           <div className="d-flex justify-content-between align-items-center mb-4">
-            <h1 className="display-4" style={{ fontWeight: "600", color: "#2c3e50" }}>
+            <h1 className="display-4" style={{ fontWeight: "600", color: "#000000" }}>
               To-do List
             </h1>
             <div>
