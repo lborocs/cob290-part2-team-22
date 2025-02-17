@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Dropdown, Button, Form, Modal, Navbar, Nav, NavDropdown, Container, Row, Col} from 'react-bootstrap';
 
-const EmpNavbar = ({ setUserRole, setUserId, userId }) => {
+const ManNavbar = ({ setUserRole, setUserId, userId }) => {
   const [step, setStep] = useState("currentPassword");
   const [showLogoutConfirmation, setShowLogoutConfirmation] = useState(false);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -231,19 +231,18 @@ const closeDropdown = () => {
             {/* Profile Details */}
             <div className="profile-details">
               <Row className="mb-3">
-                <Col xs={4} className="fw-bold text-secondary">Username:</Col>
-                <Col xs={8}>{username}</Col>
+                <Col xs={4} className="fw-bold text-dark profile-label">Username:</Col>
+                <Col xs={8} className="profile-value">{username}</Col>
               </Row>
               <Row className="mb-3">
-                <Col xs={4} className="fw-bold text-secondary">Role:</Col>
-                <Col xs={8}>{role}</Col>
+                <Col xs={4} className="fw-bold text-dark profile-label">Role:</Col>
+                <Col xs={8} className="profile-value">{role}</Col>
               </Row>
               <Row className="mb-3">
-                <Col xs={4} className="fw-bold text-secondary">Job Title:</Col>
-                <Col xs={8}>{job_title}</Col>
+                <Col xs={4} className="fw-bold text-dark profile-label">Job Title:</Col>
+                <Col xs={8} className="profile-value">{job_title}</Col>
               </Row>
             </div>
-
             <hr />
 
             {/* Change Password Section */}
@@ -416,4 +415,4 @@ const closeDropdown = () => {
   );
 };
 
-export default EmpNavbar;
+export default ManNavbar;
