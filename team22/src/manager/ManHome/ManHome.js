@@ -245,7 +245,7 @@ function ManagerDashboard() {
 
   return (
     <div className="container mt-4">
-      <h1 className="text-center mb-4" style={{ color: "#2c3e50", fontWeight: "bold" }}>Manager Dashboard</h1>
+      <h1 className="text-center mb-4" style={{ color: "#000000" }}>Manager Dashboard</h1>
       <div className="row g-4">
         {/* Task Information Card */}
         <div className="col-md-4">

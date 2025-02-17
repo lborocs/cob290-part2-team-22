@@ -299,7 +299,7 @@ return (
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)}>
+      <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Logout</Modal.Title>
         </Modal.Header>

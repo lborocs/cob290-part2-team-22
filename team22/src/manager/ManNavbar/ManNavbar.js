@@ -303,8 +303,8 @@ const closeDropdown = () => {
       </Modal>
 
       {/* Logout Confirmation Modal */}
-      <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)}>
-        <Modal.Header closeButton>
+      <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)} backdrop="static" keyboard={false}>
+      <Modal.Header closeButton>
           <Modal.Title>Confirm Logout</Modal.Title>
         </Modal.Header>
         <Modal.Body>Are you sure you want to log out?</Modal.Body>
