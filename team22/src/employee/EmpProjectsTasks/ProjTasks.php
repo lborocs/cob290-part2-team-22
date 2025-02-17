@@ -20,9 +20,8 @@ $action = isset($_GET['action']) ? $_GET['action'] : '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 
-    // -----------------------------
+    
     // Get Projects for a given user
-    // -----------------------------
     if ($action == 'getProjects') {
         $user_id = intval($_GET['user_id']);
 
@@ -70,9 +69,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         echo json_encode($projects);
         exit();
        
-    // -----------------------------
     // Get Tasks for a given project and user
-    // -----------------------------
     } elseif ($action == 'getTasks') {
         $project_id = intval($_GET['project_id']);
         $user_id = intval($_GET['user_id']);
@@ -96,9 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-     // -----------------------------
     // Get Team Leader ID for a Project
-    // -----------------------------
     if ($action == 'getTeamLeader') {
         $project_id = intval($_GET['project_id']);
 
@@ -113,9 +108,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         exit();
     }
 
-    // -----------------------------
     // Get all tasks for a project with user details
-    // -----------------------------
     if ($action == 'getAllProjectsTasks') {
         $project_id = intval($_GET['project_id']);
         
@@ -189,24 +182,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     }
 
 
-    // -----------------------------
     // Get Individual Tasks for a given user
-    // -----------------------------
     if ($action == 'getIndividualTasks') {
         $user_id = intval($_GET['user_id']);
-
-        // Query to fetch all individual tasks for the given user
-        $query = "SELECT * FROM individual_tasks
-                  WHERE user_id = $user_id AND binned = 0
-                  ORDER BY deadline ASC";
-
+    
+        // Query to fetch all individual tasks for the given user, including the name of the user who assigned the task
+        $query = "SELECT it.*, u.name AS assigned_by_name 
+                  FROM individual_tasks it
+                  LEFT JOIN Users u ON it.assigned_by = u.user_id
+                  WHERE it.user_id = $user_id AND it.binned = 0
+                  ORDER BY it.deadline ASC";
+    
         $result = $mysqli->query($query);
         if (!$result) {
             error_log("Error fetching individual tasks: " . $mysqli->error);
             echo json_encode(["error" => "Error fetching individual tasks"]);
             exit();
         }
-
+    
         $individual_tasks = [];
         while ($row = $result->fetch_assoc()) {
             $individual_tasks[] = $row;
@@ -229,9 +222,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // ---------------------------------
     // Update a task’s status 
-    // ---------------------------------
     if ($action == 'updateTask') {
         $task_id = intval($data['task_id']);
         $user_id = intval($data['user_id']);
@@ -288,9 +279,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
 
-    // -----------------------------
     // Add a new task
-    // -----------------------------
     if ($action == 'addTask') {
         $project_id = intval($data['project_id']);
         $user_id = isset($data['user_id']) ? intval($data['user_id']) : NULL;
@@ -317,9 +306,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // -----------------------------
     // Edit a task
-    // -----------------------------
     if ($action == 'editTask') {
         $task_id = intval($data['task_id']);
         $project_id = intval($data['project_id']);
@@ -348,9 +335,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // -----------------------------
     // Delete a task
-    // -----------------------------
     if ($action == 'deleteTask') {
         $task_id = intval($data['task_id']);
         
@@ -388,9 +373,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    // -----------------------------
     // Tick off an individual task
-    // -----------------------------
     if ($action == 'updateIndividualTask') {
         $task_id = intval($data['individual_task_id']);
         $user_id = intval($data['user_id']);
