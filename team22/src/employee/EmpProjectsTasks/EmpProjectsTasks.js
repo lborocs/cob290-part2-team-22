@@ -887,7 +887,7 @@ const EmpProjectsTasks = ({ userId }) => {
       {/* Individual Tasks Section */}
       <Row className="mt-4">
         <Col xs={12}>
-          <h2>Individual Tasks</h2>
+          <h1 className="text-center mb-4">Individual Tasks</h1> {/* Updated this line */}
 
           {/* Filter buttons for individual tasks and sort dropdown */}
           <div className="d-flex justify-content-between mb-4">
