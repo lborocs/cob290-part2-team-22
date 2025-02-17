@@ -714,7 +714,7 @@ const ManTasks = () => {
         </Form>
       </Modal>
 
-      <Modal show={showChart} onHide={() => setShowChart(false)}>
+      <Modal show={showChart} onHide={() => setShowChart(false)} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{selectedUser ? getUserName(selectedUser) : ""} Task Progress</Modal.Title>
         </Modal.Header>
@@ -739,7 +739,7 @@ const ManTasks = () => {
       </Modal>
 
       {/* Confirmation Modal */}
-      <Modal show={confirmModal.show} onHide={closeConfirmModal}>
+      <Modal show={confirmModal.show} onHide={closeConfirmModal} backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>{confirmModal.title}</Modal.Title>
         </Modal.Header>

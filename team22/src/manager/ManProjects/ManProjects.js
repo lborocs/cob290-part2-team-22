@@ -1049,6 +1049,7 @@ const ManProjects = () => {
           setShowProjectChart(false)
           setSelectedProject(null)
         }}
+        backdrop="static" keyboard={false}
       >
         <Modal.Header closeButton>
           <Modal.Title>
