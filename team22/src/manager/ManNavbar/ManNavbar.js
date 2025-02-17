@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Dropdown, Button, Form, Modal, Navbar, Nav, NavDropdown, Container } from 'react-bootstrap';
+import { Dropdown, Button, Form, Modal, Navbar, Nav, NavDropdown, Container, Row, Col} from 'react-bootstrap';
 
 const ManNavbar = ({ setUserRole, setUserId, userId }) => {
   const [step, setStep] = useState("currentPassword");
@@ -227,80 +227,109 @@ const closeDropdown = () => {
       </Navbar>
 
       {/* Profile Modal */}
-      <Modal show={showProfileModal} onHide={handleProfileModalHide} backdrop="static" keyboard={false}>
+      <Modal show={showProfileModal} onHide={handleProfileModalHide} backdrop="static" keyboard={false} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Profile</Modal.Title>
+          <Modal.Title className="fw-bold">My Profile</Modal.Title>
         </Modal.Header>
         <Modal.Body>
-          <Form>
-            <Form.Group>
-              <Form.Label>Username</Form.Label>
-              <Form.Control type="text" value={username} readOnly />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Role</Form.Label>
-              <Form.Control type="text" value={role} readOnly />
-            </Form.Group>
-            <Form.Group>
-              <Form.Label>Job Title</Form.Label>
-              <Form.Control type="text" value={job_title} readOnly />
-            </Form.Group>
-          </Form>
+          <div className="profile-container p-3">
+            
 
-          {/* Change Password Section */}
-          <h5 className="mt-4">Change Password</h5>
-          {step === "currentPassword" && (
-            <Form onSubmit={handleCurrentPasswordSubmit}>
-              <Form.Group>
-                <Form.Label>Current Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="currentPassword"
-                  value={passwordData.currentPassword}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Form.Group>
-              <Button variant="primary" type="submit" className="mt-3">
-                Verify Password
-              </Button>
-            </Form>
-          )}
+            <hr />
 
-          {step === "newPassword" && (
-            <Form onSubmit={handleNewPasswordSubmit}>
-              <Form.Group>
-                <Form.Label>New Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="newPassword"
-                  value={passwordData.newPassword}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Form.Group>
-              <Form.Group>
-                <Form.Label>Confirm New Password</Form.Label>
-                <Form.Control
-                  type="password"
-                  name="confirmNewPassword"
-                  value={passwordData.confirmNewPassword}
-                  onChange={handleInputChange}
-                  required
-                />
-              </Form.Group>
-              <Button variant="primary" type="submit" className="mt-3">
-                Change Password
-              </Button>
-            </Form>
-          )}
+            {/* Profile Details */}
+            <div className="profile-details">
+              <Row className="mb-3">
+                <Col xs={4} className="fw-bold text-secondary">Username:</Col>
+                <Col xs={8}>{username}</Col>
+              </Row>
+              <Row className="mb-3">
+                <Col xs={4} className="fw-bold text-secondary">Role:</Col>
+                <Col xs={8}>{role}</Col>
+              </Row>
+              <Row className="mb-3">
+                <Col xs={4} className="fw-bold text-secondary">Job Title:</Col>
+                <Col xs={8}>{job_title}</Col>
+              </Row>
+            </div>
+
+            <hr />
+
+            {/* Change Password Section */}
+            <h5 className="fw-bold text-primary">Change Password</h5>
+            <p className="text-muted">For security reasons, please update your password regularly.</p>
+            {step === "currentPassword" && (
+              <Form onSubmit={handleCurrentPasswordSubmit}>
+                <Form.Group>
+                  <Form.Label className="fw-bold">Current Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="currentPassword"
+                    value={passwordData.currentPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Form.Group>
+                <Button variant="primary" type="submit" className="mt-3 w-100">
+                  Verify Password
+                </Button>
+              </Form>
+            )}
+
+            {step === "newPassword" && (
+              <Form onSubmit={handleNewPasswordSubmit}>
+                <Form.Group>
+                  <Form.Label className="fw-bold">New Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="newPassword"
+                    value={passwordData.newPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Form.Group>
+                <Form.Group>
+                  <Form.Label className="fw-bold">Confirm New Password</Form.Label>
+                  <Form.Control
+                    type="password"
+                    name="confirmNewPassword"
+                    value={passwordData.confirmNewPassword}
+                    onChange={handleInputChange}
+                    required
+                  />
+                </Form.Group>
+                <Button variant="success" type="submit" className="mt-3 w-100">
+                  Update Password
+                </Button>
+              </Form>
+            )}
+          </div>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={handleProfileModalHide}>
+          <Button variant="secondary" onClick={handleProfileModalHide} className="w-100">
             Close
           </Button>
         </Modal.Footer>
+
+        {/* Custom Styling */}
+        <style>
+          {`
+            .profile-container {
+              background: #f8f9fa;
+              border-radius: 8px;
+              padding: 20px;
+            }
+            .profile-details p {
+              font-size: 16px;
+              margin-bottom: 10px;
+            }
+            .text-secondary {
+              font-size: 14px;
+            }
+          `}
+        </style>
       </Modal>
+
 
       {/* Logout Confirmation Modal */}
       <Modal show={showLogoutConfirmation} onHide={() => setShowLogoutConfirmation(false)} backdrop="static" keyboard={false}>
