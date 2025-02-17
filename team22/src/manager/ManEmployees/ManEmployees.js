@@ -1,3 +1,5 @@
+"use client"
+
 import { useState, useEffect } from "react"
 import {
   Container,
@@ -293,7 +295,7 @@ const ManEmployees = () => {
 
   useEffect(() => {
     fetchEmployees()
-  }, []) // Removed employees from the dependency array
+  }, [employees]) // Added employees to the dependency array
 
   return (
     <Container fluid className="py-4 bg-light">
@@ -423,7 +425,13 @@ const ManEmployees = () => {
       </Card>
 
       {/* Skills Distribution Modal */}
-      <Modal show={showSkillsChart} onHide={() => setShowSkillsChart(false)} size="lg">
+      <Modal
+        show={showSkillsChart}
+        onHide={() => setShowSkillsChart(false)}
+        size="lg"
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header closeButton>
           <Modal.Title>Skills Distribution</Modal.Title>
         </Modal.Header>
@@ -446,10 +454,21 @@ const ManEmployees = () => {
             />
           </div>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowSkillsChart(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Individual Task Allocation Modal */}
-      <Modal show={showTaskAllocationChart} onHide={() => setShowTaskAllocationChart(false)} size="lg">
+      <Modal
+        show={showTaskAllocationChart}
+        onHide={() => setShowTaskAllocationChart(false)}
+        size="lg"
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header closeButton>
           <Modal.Title>Individual Task Allocation (Top 5)</Modal.Title>
         </Modal.Header>
@@ -474,10 +493,21 @@ const ManEmployees = () => {
             />
           </div>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowTaskAllocationChart(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Project Task Allocation Modal */}
-      <Modal show={showProjectTaskAllocationChart} onHide={() => setShowProjectTaskAllocationChart(false)} size="lg">
+      <Modal
+        show={showProjectTaskAllocationChart}
+        onHide={() => setShowProjectTaskAllocationChart(false)}
+        size="lg"
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header closeButton>
           <Modal.Title>Project Task Allocation (Top 5)</Modal.Title>
         </Modal.Header>
@@ -502,10 +532,21 @@ const ManEmployees = () => {
             />
           </div>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowProjectTaskAllocationChart(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Warnings Overview Modal */}
-      <Modal show={showWarningsChart} onHide={() => setShowWarningsChart(false)} size="lg">
+      <Modal
+        show={showWarningsChart}
+        onHide={() => setShowWarningsChart(false)}
+        size="lg"
+        backdrop="static"
+        keyboard={false}
+      >
         <Modal.Header closeButton>
           <Modal.Title>Warnings Overview</Modal.Title>
         </Modal.Header>
@@ -530,6 +571,11 @@ const ManEmployees = () => {
             />
           </div>
         </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={() => setShowWarningsChart(false)}>
+            Close
+          </Button>
+        </Modal.Footer>
       </Modal>
 
       {/* Employee Edit Modal */}
