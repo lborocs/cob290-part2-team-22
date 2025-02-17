@@ -256,7 +256,7 @@ const closeDropdown = () => {
             <hr />
 
             {/* Change Password Section */}
-            <h5 className="fw-bold text-primary">Change Password</h5>
+            <h5 className="fw-bold text-dark">Change Password</h5>
             <p className="text-muted">For security reasons, please update your password regularly.</p>
             {step === "currentPassword" && (
               <Form onSubmit={handleCurrentPasswordSubmit}>
