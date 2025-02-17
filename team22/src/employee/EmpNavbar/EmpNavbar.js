@@ -196,9 +196,6 @@ return (
             <Nav.Link as={Link} to="/" className="text-black" onClick={closeDropdown}>
               Home
             </Nav.Link>
-            <Nav.Link as={Link} to="/projects-tasks" className="text-black" onClick={closeDropdown}>
-              Projects/Tasks
-            </Nav.Link>
             <Nav.Link as={Link} to="/todolist" className="text-black" onClick={closeDropdown}>
               TodoList
             </Nav.Link>

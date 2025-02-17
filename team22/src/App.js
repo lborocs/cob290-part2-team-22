@@ -10,7 +10,6 @@ import TodoList from './TodoList pages/TodoList';
 
 // Employee Components
 import EmpNavbar from './employee/EmpNavbar/EmpNavbar';
-import EmpHome from './employee/EmpHome/EmpHome';
 import EmpProjectsTasks from './employee/EmpProjectsTasks/EmpProjectsTasks';
 import EmpForum from './employee/EmpForum/EmpForum';
 
@@ -51,8 +50,7 @@ function App() {
             <Routes>
               {userRole === "Employee" && (
                 <>
-                  <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
-                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId} />} />
+                  <Route path="/" element={<EmpProjectsTasks userId={userId} />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
@@ -71,8 +69,7 @@ function App() {
   
               {userRole === "Team Leader" && (
                 <>
-                  <Route path="/" element={<EmpHome userId={userId} userRole={userRole} />} />
-                  <Route path="/projects-tasks" element={<EmpProjectsTasks userId={userId} />} />
+                  <Route path="/" element={<EmpProjectsTasks userId={userId} />} />
                   <Route path="/forum/*" element={<EmpForum userId={userId} />} />
                   <Route path="/todolist" element={<TodoList userId={userId} />} />
                 </>
