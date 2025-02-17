@@ -1,5 +1,3 @@
-"use client"
-
 import { useState, useEffect, useRef } from "react"
 import {
   Container,
@@ -75,7 +73,7 @@ const ManTasks = () => {
     title: "",
     message: "",
     onConfirm: null,
-    variant: "danger", // Default variant is red
+    variant: "danger", 
   })
 
   const openConfirmModal = (title, message, onConfirm, variant = "danger") => {
