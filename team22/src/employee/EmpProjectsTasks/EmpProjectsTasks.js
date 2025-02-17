@@ -125,7 +125,7 @@ const EmpProjectsTasks = ({ userId }) => {
   // Confirmation modal for deletion
   const ConfirmationModal = ({ show, onConfirm, onCancel, message }) => {
     return (
-      <Modal show={show} onHide={onCancel} centered>
+      <Modal show={show} onHide={onCancel} centered backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>Confirm Deletion</Modal.Title>
         </Modal.Header>
@@ -395,7 +395,7 @@ const EmpProjectsTasks = ({ userId }) => {
         </Modal>
 
         {/* Add Task Form Modal */}
-        <Modal show={showAddTaskForm} onHide={() => setShowAddTaskForm(false)} centered>
+        <Modal show={showAddTaskForm} onHide={() => setShowAddTaskForm(false) } backdrop="static" keyboard={false}centered>
           <Modal.Header closeButton>
             <Modal.Title>Add Task</Modal.Title>
           </Modal.Header>
@@ -988,7 +988,7 @@ const EmpProjectsTasks = ({ userId }) => {
         </Col>
       </Row>
 
-      <Modal show={showProgressModal} onHide={() => setShowProgressModal(false)} size="lg">
+      <Modal show={showProgressModal} onHide={() => setShowProgressModal(false)} size="lg" backdrop="static" keyboard={false}>
         <Modal.Header closeButton>
           <Modal.Title>All Projects Progress</Modal.Title>
         </Modal.Header>
