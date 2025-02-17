@@ -226,7 +226,11 @@ function ManagerDashboard() {
   }, []);
 
   if (loading) {
-    return <div className="container mt-4">Loading...</div>;
+    return <div className="container mt-4 text-center">
+      <div className="spinner-border text-primary" role="status">
+        <span className="visually-hidden">Loading...</span>
+      </div>
+    </div>;
   }
 
   if (error) {
@@ -241,25 +245,24 @@ function ManagerDashboard() {
 
   return (
     <div className="container mt-4">
-      <h1 className="text-center mb-4" style={{ color: "#2c3e50" }}>Manager Dashboard</h1>
-      <div className="row mt-4">
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#3498db" }}>
+      <h1 className="text-center mb-4" style={{ color: "#2c3e50", fontWeight: "bold" }}>Manager Dashboard</h1>
+      <div className="row g-4">
+        {/* Task Information Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#3498db", borderRadius: "10px 10px 0 0" }}>
               <div className="d-flex justify-content-between align-items-center">
                 <h5 className="card-title mb-0">
                   <i className="bi bi-list-task me-2"></i> Task Information
                 </h5>
-                <div className="dropdown">
-                  <select value={selectedProject} onChange={onProjectChange} className="form-select form-select-sm bg-light text-dark" style={{ width: "75%", border: "1px solid #ced4da", borderRadius: "5px", fontSize: "14px", cursor: "pointer" }}>
-                    <option value="">Select a Project</option>
-                    {projects.map((proj) => (
-                      <option key={proj.project_id} value={proj.project_id}>
-                        {proj.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <select value={selectedProject} onChange={onProjectChange} className="form-select form-select-sm bg-light text-dark" style={{ width: "75%", borderRadius: "5px", fontSize: "14px", cursor: "pointer" }}>
+                  <option value="">Select a Project</option>
+                  {projects.map((proj) => (
+                    <option key={proj.project_id} value={proj.project_id}>
+                      {proj.name}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
             <div className="card-body">
@@ -279,9 +282,10 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#2ecc71" }}>
+        {/* Project Information Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#2ecc71", borderRadius: "10px 10px 0 0" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-folder me-2"></i> Project Information
               </h5>
@@ -299,7 +303,7 @@ function ManagerDashboard() {
                 <span>Overall Project Progress</span>
                 <span className="badge bg-primary">{projectStats.average_progress}%</span>
               </div>
-              <div className="progress">
+              <div className="progress" style={{ height: "10px" }}>
                 <div
                   className="progress-bar bg-success" role="progressbar" style={{ width: `${projectStats.average_progress}%` }}
                   aria-valuenow={projectStats.average_progress} aria-valuemin="0" aria-valuemax="100"
@@ -311,11 +315,12 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#e74c3c" }}>
+        {/* Task Priority Information Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#e74c3c", borderRadius: "10px 10px 0 0" }}>
               <h5 className="card-title mb-0">
-                <i className="bi bi-folder me-2"></i> Total Task Priority Information
+                <i className="bi bi-folder me-2"></i> Task Priority Information
               </h5>
             </div>
             <div className="card-body">
@@ -335,9 +340,10 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#9b59b6" }}>
+        {/* Overall User Info Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#9b59b6", borderRadius: "10px 10px 0 0" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-person"></i> Overall User Info
               </h5>
@@ -382,9 +388,10 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#34495e" }}>
+        {/* Active Project Status Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#34495e", borderRadius: "10px 10px 0 0" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-person"></i> Active Project Status
               </h5>
@@ -395,9 +402,10 @@ function ManagerDashboard() {
           </div>
         </div>
 
-        <div className="col-4 mb-4">
-          <div className="card h-100 shadow-sm">
-            <div className="card-header text-white" style={{ backgroundColor: "#16a085" }}>
+        {/* Top 5 Highest Task Count Card */}
+        <div className="col-md-4">
+          <div className="card h-100 shadow-sm border-0">
+            <div className="card-header text-white" style={{ backgroundColor: "#16a085", borderRadius: "10px 10px 0 0" }}>
               <h5 className="card-title mb-0">
                 <i className="bi bi-person"></i> Top 5 Highest Task Count
               </h5>
